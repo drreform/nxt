@@ -12,7 +12,7 @@ where each `<>` represents 1 byte, that is two hexadecimal digits.
 ### Usage
 ```javascript
 encodedString = Encode2Hex('B1', nxt.device.printer, nxt.type.request, nxt.method.print, '0001111111111111111111111111');
-console.log(encodedString);
+console.log(encodedString); // 0FB1A2A0B01FFFFFF
 
 // TODO:
 // sendBtMessage(encodedString);
