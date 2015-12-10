@@ -1,4 +1,10 @@
-#include "motor.c"
+//#pragma config(Sensor, S1,     touchSensor1,   sensorTouch)
+#pragma platform(NXT)
+/* DON'T TOUCH THE ABOVE CONFIGURATION */
+
+#include "../motor.c"
+#include "printer.c"
+#include "printer_bt.c"
 
 void setBrick(int i, int j)
 {
@@ -42,20 +48,23 @@ void setBrick(int i, int j)
 
 task main()
 {
+	wait1Msec(2000);
+	// Move the conveyor for 3 gear teeth
+	moveConveyor(0x03);
 
-	int IntArray[4] =
-	{
-		1,
-		0,
-		1,
-		1,
-	};
+	//int IntArray[4] =
+	//{
+	//	1,
+	//	0,
+	//	1,
+	//	1,
+	//};
 
-	for(int i = 0; i< 4; i++)
-	{
-		if (IntArray[i]==1)
-		{
-			setBrick(i,0);
-		}
-	}
+	//for(int i = 0; i< 4; i++)
+	//{
+	//	if (IntArray[i]==1)
+	//	{
+	//		setBrick(i,0);
+	//	}
+	//}
 }
