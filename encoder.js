@@ -41,24 +41,12 @@ function Encode2Hex(senderID, receiverID, type, method, binaryData){
 	}
 	
 	// data
-/* 	if (binaryData.length != 28) {
-		console.error('Expected length of data is 28, but got '+ binaryData.length);
-		return false;
-	} */
 	if(!checkBin(binaryData)){
 		console.error('data must be in binary!');
 		return false;
 	}
 	
-	
 	message = senderID+receiverID+type+method+Bin2Hex(binaryData)
-	
-	console.log("messageeeeee")
-	console.log(senderID)
-	console.log(receiverID)
-	console.log(type)
-	console.log(method)
-	console.log(Bin2Hex(binaryData))
 	
 	// length
 	if(!checkDec(message.length)){
@@ -74,9 +62,7 @@ function Encode2Hex(senderID, receiverID, type, method, binaryData){
 		messageLength = '0'+messageLength;
 	}
 	
-	console.log(messageLength)
-	console.log(messageLength+message)
-	
+	console.log('Message:', messageLength, senderID, receiverID, type, method, Bin2Hex(binaryData));
 	return messageLength+message;
 }
 
