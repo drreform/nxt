@@ -41,16 +41,43 @@ function Encode2Hex(senderID, receiverID, type, method, binaryData){
 	}
 	
 	// data
-	if (binaryData.length != 28) {
+/* 	if (binaryData.length != 28) {
 		console.error('Expected length of data is 28, but got '+ binaryData.length);
 		return false;
-	}
+	} */
 	if(!checkBin(binaryData)){
 		console.error('data must be in binary!');
 		return false;
 	}
 	
-	return senderID+receiverID+type+method+Bin2Hex(binaryData);
+	
+	message = senderID+receiverID+type+method+Bin2Hex(binaryData)
+	
+	console.log("messageeeeee")
+	console.log(senderID)
+	console.log(receiverID)
+	console.log(type)
+	console.log(method)
+	console.log(Bin2Hex(binaryData))
+	
+	// length
+	if(!checkDec(message.length)){
+		console.error('length is not decimal!');
+		return false;
+	}
+	if (message.length > 255) {
+		console.error('Max length of message is 255, but got '+ message.length);
+		return false;
+	}
+	messageLength = Dec2Hex(message.length)
+	if (message.length < 16) {
+		messageLength = '0'+messageLength;
+	}
+	
+	console.log(messageLength)
+	console.log(messageLength+message)
+	
+	return messageLength+message;
 }
 
 
