@@ -1,4 +1,4 @@
-Encode and send messages to NXTs via Bluetooth
+**Encode and send messages to NXT-based machines via Bluetooth**
 
 ## Encoder
 The encoder encodes human readable data into hexadecimal digits in a format readable by the [Bluetooth API](https://github.com/CSCWLab2015/NXT/wiki/Bluetooth-API).
