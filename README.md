@@ -4,8 +4,10 @@ Encode and send messages to NXTs via Bluetooth
 The encoder encodes human readable data into hexadecimal, ready to be sent to an NXT device via Bluetooth.
 
 An encoded message has the following format:
+
 `<messageLength> <senderID> <receiverID> <messageType> <method> <data>`
-Each `<>` represents 1 byte, that is two hexadecimal digits.
+
+where each `<>` represents 1 byte, that is two hexadecimal digits.
 
 ### Usage
 ```javascript
