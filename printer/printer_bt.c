@@ -50,12 +50,14 @@ void sendDataMsg(ubyte senderID, ubyte receiverID, ubyte type, ubyte method, uby
 	if (nDeltaTime < kTimeBetweenXmit)
 	{
 		//nxtDisplayTextLine(2, "Bsy%6d %6d", nSendBusy1, ++nSendBusy2);
+		PlaySound(soundException);
 		return;
 	}
 
 	if (bBTBusy)
 	{
 		//nxtDisplayTextLine(2, "Bsy%6d %6d", ++nSendBusy1, nSendBusy2);
+		PlaySound(soundException);
 		return;
 	}
 
@@ -76,6 +78,7 @@ void sendDataMsg(ubyte senderID, ubyte receiverID, ubyte type, ubyte method, uby
 	case ioRsltCommChannelBad:
 	default:
 		//nxtDisplayTextLine(4, "Send Bad  %6d", ++nSendBad);
+		PlaySound(soundException);
 		break;
 	}
 	return;
