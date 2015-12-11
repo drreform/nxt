@@ -51,14 +51,14 @@ void sendDataMsg()
 	if (nDeltaTime < kTimeBetweenXmit)
 	{
 		//nxtDisplayTextLine(2, "Bsy%6d %6d", nSendBusy1, ++nSendBusy2);
-		PlaySound(soundException);
+		//PlaySound(soundException);
 		return;
 	}
 
 	if (bBTBusy)
 	{
 		//nxtDisplayTextLine(2, "Bsy%6d %6d", ++nSendBusy1, nSendBusy2);
-		PlaySound(soundException);
+		//PlaySound(soundException);
 		return;
 	}
 
@@ -162,6 +162,7 @@ void readDataMsg()
 			//for( int i=1; i<=l; i++){
 			//	nxtDisplayTextLine(i, "m: %x", nRcvBuffer[i]);
 			//}
+			PlaySound(soundShortBlip);
 			demux(nRcvBuffer);
 
 			//nxtDisplayTextLine(7, "M:%x %x %x %x %x", nRcvBuffer[0], nRcvBuffer[1], nRcvBuffer[2], nRcvBuffer[3],  nRcvBuffer[5]);
@@ -174,7 +175,7 @@ void readDataMsg()
 }
 
 
-void sendMessages()
+task sendMessages()
 {
 	//
 	// Send and receive 1M messages

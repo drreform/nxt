@@ -1,11 +1,15 @@
-#pragma config (Sensor , S1 , colorSensor , sensorCOLORFULL )
-//#pragma config(Sensor, S1,     touchSensor1,   sensorTouch)
+#pragma config(Sensor, S1, colorSensor, sensorCOLORFULL)
+#pragma config(Sensor, S3, touchTop, sensorTouch)
+#pragma config(Sensor, S4, touchOrigin, sensorTouch)
 //#pragma platform(NXT)
 /* DON'T TOUCH THE ABOVE CONFIGURATION */
 
 #include "../constants.c"
 #include "../motor.c"
 #include "printer_bt.c"
+
+#define motorLift motorA
+#define motorMove motorC
 
 //-------------getBarcode-------------//
 int barCode[4];
@@ -42,25 +46,27 @@ void setBrick(int i, int j)
 
 
 	//move down & up
-	driveDistance(5,-30,motorB);
-	wait1Msec(500);
-	driveDistance(5,30,motorB);
+	driveGear(11,-10,motorLift);
 	wait1Msec(500);
 
-	driveDistance(i+7 ,30,motorC);
+	driveGear(11,10,motorLift);
 	wait1Msec(500);
 
-	//driveDistance(j ,-30,motorC); // for the 2D movement
+	driveNipple(i+7 ,20,motorMove);
+	wait1Msec(500);
+
+	//driveNipple(j ,-30,motorMove); // for the 2D movement
 	//wait1Msec(500);
 
-	driveDistance(5,-90,motorB);
+	driveGear(12,-10,motorLift);
 	wait1Msec(500);              //Stop in between each command to prevent momentum causing wheel skid.
-	driveDistance(5,30,motorB);
+
+	driveGear(12,10,motorLift);
 	wait1Msec(500);
 
-	driveDistance(i+7 , -30,motorC);
+	driveNipple(i+7 , -20,motorMove);
 	wait1Msec(500);
-	//driveDistance(j ,30,motorC);
+	//driveNipple(j ,30,motorMove);
 	//wait1Msec(500);
 
 }
@@ -74,7 +80,7 @@ void writeLetter(int * letter)
 	for(int i = 0; i< s; i++)
 	{
 		if (i!=0 && i%1==0){
-			moveConveyor(0x01);
+			//moveConveyor(0x01);
 			wait1Msec(500);
 		}
 
@@ -98,10 +104,48 @@ bool checkBrick()
 
 }
 
+//--------move printer head to origin--------//
+void moveToOrigin(){
+	while(true)
+	{
+		if(SensorValue[touchOrigin] == 0){
+			motor[motorMove] = -10;
+		}
+		else {
+			break;
+		}
+	}
+	motor[motorMove] = 0;
+	PlaySound(soundBlip);
+}
+
+void moveToTop(){
+	while(true)
+	{
+		if(SensorValue[touchTop] == 0){
+			motor[motorLift] = 10;
+
+		}
+		else {
+			break;
+		}
+	}
+	motor[motorLift] = 0;
+	PlaySound(soundBlip);
+}
+
+
+
 //-------------main-------------//
 
 task main()
 {
+	moveToTop();
+	moveToOrigin();
+	driveDegree(4,10,motorMove);
+
+
+
 	wait1Msec(1000);
 	int letter[4] =
 	{
@@ -113,6 +157,6 @@ task main()
 //moveConveyor(0x025);
 //getBarcode();
 	writeLetter(letter);
-//	driveDistance(5,30,motorB);
+//	driveNipple(5,30,motorLift);
 
 }
