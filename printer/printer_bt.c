@@ -1,6 +1,5 @@
 
-#pragma platform(NXT)
-#include "../constants.c"
+//#pragma platform(NXT)
 
 long nElapsedTime = 0;
 float fThroughput = 0;
@@ -44,19 +43,19 @@ void sendDataMsg(ubyte senderID, ubyte receiverID, ubyte type, ubyte method, uby
 	const bool bWaitForReply = false;
 	TFileIOResult nBTCmdErrorStatus;
 
-	//nxtDisplayTextLine(1, "Send      %6d", nSendTotal);
+	nxtDisplayTextLine(1, "Send      %6d", nSendTotal);
 
 	nDeltaTime = nPgmTime - nLastXmitTimeStamp;
 	if (nDeltaTime < kTimeBetweenXmit)
 	{
-		//nxtDisplayTextLine(2, "Bsy%6d %6d", nSendBusy1, ++nSendBusy2);
+		nxtDisplayTextLine(2, "Bsy%6d %6d", nSendBusy1, ++nSendBusy2);
 		PlaySound(soundException);
 		return;
 	}
 
 	if (bBTBusy)
 	{
-		//nxtDisplayTextLine(2, "Bsy%6d %6d", ++nSendBusy1, nSendBusy2);
+		nxtDisplayTextLine(2, "Bsy%6d %6d", ++nSendBusy1, nSendBusy2);
 		PlaySound(soundException);
 		return;
 	}
@@ -67,7 +66,7 @@ void sendDataMsg(ubyte senderID, ubyte receiverID, ubyte type, ubyte method, uby
 	{
 	case ioRsltSuccess:
 	case ioRsltCommPending:
-		//nxtDisplayTextLine(3, "Send OK   %6d", ++nSendGood);
+		nxtDisplayTextLine(3, "Send OK   %6d", ++nSendGood);
 		nDeltaTime = nPgmTime - nLastXmitTimeStamp;
 		nLastXmitTimeStamp = nPgmTime;
 		if (nDeltaTime >= kTimestampHistogramSize)
@@ -77,11 +76,19 @@ void sendDataMsg(ubyte senderID, ubyte receiverID, ubyte type, ubyte method, uby
 
 	case ioRsltCommChannelBad:
 	default:
-		//nxtDisplayTextLine(4, "Send Bad  %6d", ++nSendBad);
+		nxtDisplayTextLine(4, "Send Bad  %6d", ++nSendBad);
 		PlaySound(soundException);
 		break;
 	}
 	return;
+}
+
+void moveConveyor(ubyte nipples)
+{
+	checkBTLinkConnected();
+	sendDataMsg(PRINTER, CONVEYOR, REQUEST, CONVEYOR_MOVE, nipples);
+	nElapsedTime = nPgmTime;
+	wait1Msec(1);
 }
 
 void checkBTLinkConnected()
@@ -151,13 +158,7 @@ void readDataMsg()
 	return;
 }
 
-void moveConveyor(ubyte gearTeeth)
-{
-	checkBTLinkConnected();
-	sendDataMsg(PRINTER, CONVEYOR, REQUEST, CONVEYOR_MOVE, gearTeeth);
-	nElapsedTime = nPgmTime;
-	wait1Msec(1);
-}
+
 
 // test
 //task main()

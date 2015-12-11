@@ -1,9 +1,9 @@
 //#pragma config(Sensor, S1,     touchSensor1,   sensorTouch)
-#pragma platform(NXT)
+//#pragma platform(NXT)
 /* DON'T TOUCH THE ABOVE CONFIGURATION */
 
+#include "../constants.c"
 #include "../motor.c"
-#include "printer.c"
 #include "printer_bt.c"
 
 void setBrick(int i, int j)
@@ -46,11 +46,12 @@ void setBrick(int i, int j)
 
 //}
 
+
 task main()
 {
 	wait1Msec(2000);
 	// Move the conveyor for 3 gear teeth
-	moveConveyor(0x03);
+	moveConveyor(0x01);
 
 	//int IntArray[4] =
 	//{
