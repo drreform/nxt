@@ -3,10 +3,10 @@ Movement functions
 */
 
 // Move per nipple
-void driveNipple(int noOfNipples , int power, short motorX)
+void driveNipple(float noOfNipples , int power, short motorX)
 {
-
-	int tickGoal= noOfNipples * 15*2.5 ; // gear has 24 head = 24mm which is equal to 360*; each nipple is equal to 2,5mm
+	float gearToNipple = 12/2.5; // each nipple is 2.5 teeth
+	int tickGoal= (360*noOfNipples)/gearToNipple;
 
 	nMotorEncoder[motorX] = 0;  //clear the LEGO motor encoders
 	nMotorEncoderTarget[motorX] = tickGoal; //set the target stoping position
@@ -18,10 +18,10 @@ void driveNipple(int noOfNipples , int power, short motorX)
 }
 
 // Move per gear tooth
-void driveGear(int teeth , int power, short motorX)
+void driveGear(float teeth , int power, short motorX, float gearBox)
 {
 
-	int tickGoal= (360*teeth)/24 ; // gear has 24 head = 24mm which is equal to 360*; each nipple is equal to 2,5mm
+	int tickGoal= (360*teeth)/gearBox;
 
 	nMotorEncoder[motorX] = 0;  //clear the LEGO motor encoders
 	nMotorEncoderTarget[motorX] = tickGoal; //set the target stoping position

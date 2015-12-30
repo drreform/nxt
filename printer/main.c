@@ -11,6 +11,11 @@
 #define motorLift motorA
 #define motorMove motorC
 
+const float LiftGear = 8/3.0;
+const float MoveGear = 24;
+
+void moveToOrigin();
+
 //-------------getBarcode-------------//
 int barCode[4];
 int * getBarcode(){
@@ -43,29 +48,32 @@ void setBrick(int i, int j)
 
 
 // brick check error 1
-
+	const int down = 4.5;
 
 	//move down & up
-	driveGear(11,-10,motorLift);
+	// loading
+	driveGear(down,15,motorLift, LiftGear);
+	wait1Msec(500);
+	driveGear(down,-30,motorLift, LiftGear);
 	wait1Msec(500);
 
-	driveGear(11,10,motorLift);
+	// move to plate
+	driveNipple(i+6 ,20,motorMove);
+	//driveGear(1,-20,motorMove, MoveGear);
 	wait1Msec(500);
 
-	driveNipple(i+7 ,20,motorMove);
+	// printing
+	driveGear(down,15,motorLift, LiftGear);
+	wait1Msec(500);
+	driveGear(down,-30,motorLift, LiftGear);
 	wait1Msec(500);
 
-	//driveNipple(j ,-30,motorMove); // for the 2D movement
+	// move back to reload
+	//driveNipple(i+7 ,-30,motorMove);
 	//wait1Msec(500);
 
-	driveGear(12,-10,motorLift);
-	wait1Msec(500);              //Stop in between each command to prevent momentum causing wheel skid.
-
-	driveGear(12,10,motorLift);
-	wait1Msec(500);
-
-	driveNipple(i+7 , -20,motorMove);
-	wait1Msec(500);
+	//driveNipple(i+7 , -20,motorMove);
+	//wait1Msec(500);
 	//driveNipple(j ,30,motorMove);
 	//wait1Msec(500);
 
@@ -73,20 +81,35 @@ void setBrick(int i, int j)
 
 //-------------writeLetter-------------//
 
-void writeLetter(int * letter)
+void writeLetter(int * letterBad)
 {
+
+
+	int letter[5] =
+	{
+		1,
+		0,
+		1,
+		0,
+		1
+	};
+
 	int s= sizeof(letter);
 
-	for(int i = 0; i< s; i++)
+	for(int i = 0; i<s; i++)
 	{
-		if (i!=0 && i%1==0){
+		PlaySound(soundBeepBeep);
+		if (i!=0 && i%5==0){
 			//moveConveyor(0x01);
 			wait1Msec(500);
 		}
 
 		if (letter[i]==1)
 		{
-			setBrick(i,0);
+			setBrick(i%5,0);
+		}
+		if (letter[i]!=0){
+			moveToOrigin();
 		}
 	}
 
@@ -109,13 +132,15 @@ void moveToOrigin(){
 	while(true)
 	{
 		if(SensorValue[touchOrigin] == 0){
-			motor[motorMove] = -10;
+			motor[motorMove] = -20;
 		}
 		else {
 			break;
 		}
 	}
 	motor[motorMove] = 0;
+	wait1Msec(50);
+	driveGear(1,10,motorMove, MoveGear);
 	PlaySound(soundBlip);
 }
 
@@ -123,7 +148,7 @@ void moveToTop(){
 	while(true)
 	{
 		if(SensorValue[touchTop] == 0){
-			motor[motorLift] = 10;
+			motor[motorLift] = -20;
 
 		}
 		else {
@@ -131,25 +156,38 @@ void moveToTop(){
 		}
 	}
 	motor[motorLift] = 0;
-	PlaySound(soundBlip);
 }
 
+
+task adjust(){
+
+
+}
 
 
 //-------------main-------------//
 
 task main()
 {
-	moveToTop();
-	moveToOrigin();
-	driveDegree(4,10,motorMove);
-
-
-
 	wait1Msec(1000);
-	int letter[4] =
+
+	moveToTop();
+	wait1Msec(50);
+	driveGear(7,30,motorLift, LiftGear);
+	PlaySound(soundBlip);
+	driveGear(5,30,motorMove, MoveGear);
+	PlaySound(soundBlip);
+
+	moveToOrigin();
+
+	wait1Msec(500);
+
+
+	int letter[6] =
 	{
-		1,
+		0,
+		0,
+		0,
 		1,
 		1,
 		1,
