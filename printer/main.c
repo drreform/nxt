@@ -8,9 +8,9 @@
 #include "../motor.c"
 #include "printer_bt.c"
 
-#define motorLift motorA
-#define motorMove motorC
-
+// Constants
+#define LiftMotor motorA
+#define MoveMotor motorC
 const float LiftGear = 8/3.0;
 const float MoveGear = 24;
 
@@ -52,51 +52,38 @@ void setBrick(int i, int j)
 
 	//move down & up
 	// loading
-	driveGear(down,15,motorLift, LiftGear);
+	driveGear(down,15,LiftMotor, LiftGear);
 	wait1Msec(500);
-	driveGear(down,-30,motorLift, LiftGear);
+	driveGear(down,-30,LiftMotor, LiftGear);
 	wait1Msec(500);
 
 	// move to plate
-	driveNipple(i+6 ,20,motorMove);
-	//driveGear(1,-20,motorMove, MoveGear);
+	driveNipple(i+6 ,20,MoveMotor);
+	//driveGear(1,-20,MoveMotor, MoveGear);
 	wait1Msec(500);
 
 	// printing
-	driveGear(down,15,motorLift, LiftGear);
+	driveGear(down,15,LiftMotor, LiftGear);
 	wait1Msec(500);
-	driveGear(down,-30,motorLift, LiftGear);
+	driveGear(down,-30,LiftMotor, LiftGear);
 	wait1Msec(500);
 
 	// move back to reload
-	//driveNipple(i+7 ,-30,motorMove);
+	//driveNipple(i+7 ,-30,MoveMotor);
 	//wait1Msec(500);
 
-	//driveNipple(i+7 , -20,motorMove);
+	//driveNipple(i+7 , -20,MoveMotor);
 	//wait1Msec(500);
-	//driveNipple(j ,30,motorMove);
+	//driveNipple(j ,30,MoveMotor);
 	//wait1Msec(500);
 
 }
 
 //-------------writeLetter-------------//
 
-void writeLetter(int * letterBad)
+void writeLetter(int letter[], int size)
 {
-
-
-	int letter[5] =
-	{
-		1,
-		0,
-		1,
-		0,
-		1
-	};
-
-	int s= sizeof(letter);
-
-	for(int i = 0; i<s; i++)
+	for(int i=0; i<size; i++)
 	{
 		PlaySound(soundBeepBeep);
 		if (i!=0 && i%5==0){
@@ -132,15 +119,15 @@ void moveToOrigin(){
 	while(true)
 	{
 		if(SensorValue[touchOrigin] == 0){
-			motor[motorMove] = -20;
+			motor[MoveMotor] = -20;
 		}
 		else {
 			break;
 		}
 	}
-	motor[motorMove] = 0;
+	motor[MoveMotor] = 0;
 	wait1Msec(50);
-	driveGear(1,10,motorMove, MoveGear);
+	driveGear(1,10,MoveMotor, MoveGear);
 	PlaySound(soundBlip);
 }
 
@@ -148,20 +135,14 @@ void moveToTop(){
 	while(true)
 	{
 		if(SensorValue[touchTop] == 0){
-			motor[motorLift] = -20;
+			motor[LiftMotor] = -20;
 
 		}
 		else {
 			break;
 		}
 	}
-	motor[motorLift] = 0;
-}
-
-
-task adjust(){
-
-
+	motor[LiftMotor] = 0;
 }
 
 
@@ -173,9 +154,9 @@ task main()
 
 	moveToTop();
 	wait1Msec(50);
-	driveGear(7,30,motorLift, LiftGear);
+	driveGear(7,30,LiftMotor, LiftGear);
 	PlaySound(soundBlip);
-	driveGear(5,30,motorMove, MoveGear);
+	driveGear(5,30,MoveMotor, MoveGear);
 	PlaySound(soundBlip);
 
 	moveToOrigin();
@@ -183,18 +164,13 @@ task main()
 	wait1Msec(500);
 
 
-	int letter[6] =
+	int letter[5] =
 	{
-		0,
-		0,
-		0,
-		1,
-		1,
-		1,
+		0,0,0,1,1
 	};
 //moveConveyor(0x025);
 //getBarcode();
-	writeLetter(letter);
-//	driveNipple(5,30,motorLift);
+	writeLetter(letter, sizeof(letter));
+//	driveNipple(5,30,LiftMotor);
 
 }
