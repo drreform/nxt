@@ -35,6 +35,7 @@ const int kMaxSizeOfMessage = 6;
 const TMailboxIDs kQueueID = mailbox1;
 
 void readDataMsg();
+void checkBTLinkConnected();
 
 void sendDataMsg(ubyte senderID, ubyte receiverID, ubyte type, ubyte method, ubyte data)
 {

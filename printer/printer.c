@@ -16,39 +16,12 @@ const float MoveGear = 24;
 
 void moveToOrigin();
 
-//-------------getBarcode-------------//
-int barCode[4];
-int * getBarcode(){
-	barCode[0]=1;
-	int i=1;
-
-	while (i < 4 ) {
-
-		while ( ( SensorValue [ colorSensor ]!= REDCOLOR ) &&
-			( SensorValue [ colorSensor ]!= BLUECOLOR ) &&
-		( SensorValue [ colorSensor ]!= WHITECOLOR )
-		&&  SensorValue [ colorSensor ]!= YELLOWCOLOR &&  SensorValue [ colorSensor ]!= GREENCOLOR
-		) {
-			// do nothing -- just wait for red or blue color
-		}
-
-		if (SensorValue [ colorSensor ]!=  barCode[i-1] &&  SensorValue [ colorSensor ]!= BLACKCOLOR){
-			barCode[i]= SensorValue [ colorSensor ];
-			i=i+1;
-		}
-
-	}
-	return 	barCode;
-}
 
 //-------------setBrick-------------//
-
 void setBrick(int i, int j)
 {
-
-
-// brick check error 1
-	const int down = 4.5;
+	// how deep should it go
+	const float down = 3;
 
 	//move down & up
 	// loading
@@ -56,6 +29,7 @@ void setBrick(int i, int j)
 	wait1Msec(500);
 	driveGear(down,-30,LiftMotor, LiftGear);
 	wait1Msec(500);
+	moveToOrigin(); // calibrate
 
 	// move to plate
 	driveNipple(i+6 ,20,MoveMotor);
@@ -64,37 +38,38 @@ void setBrick(int i, int j)
 
 	// printing
 	driveGear(down,15,LiftMotor, LiftGear);
+	//wait1Msec(10);
+
+	// Try few times to make sure it is plugged in firmly
+	float vibr = 1;
+	int speed = 100;
+	driveGear(vibr,-speed,LiftMotor, LiftGear);
+	driveGear(vibr,speed,LiftMotor, LiftGear);
+	driveGear(vibr,-speed,LiftMotor, LiftGear);
+	driveGear(vibr,speed,LiftMotor, LiftGear);
+
 	wait1Msec(500);
 	driveGear(down,-30,LiftMotor, LiftGear);
 	wait1Msec(500);
-
-	// move back to reload
-	//driveNipple(i+7 ,-30,MoveMotor);
-	//wait1Msec(500);
-
-	//driveNipple(i+7 , -20,MoveMotor);
-	//wait1Msec(500);
-	//driveNipple(j ,30,MoveMotor);
-	//wait1Msec(500);
-
 }
 
 //-------------writeLetter-------------//
 
-void writeLetter(int letter[], int size)
+void writeLetter(int* letter, int size)
 {
 	for(int i=0; i<size; i++)
 	{
-		PlaySound(soundBeepBeep);
+		// move the conveyor
 		if (i!=0 && i%5==0){
 			//moveConveyor(0x01);
 			wait1Msec(500);
 		}
 
-		if (letter[i]==1)
-		{
+		if (letter[i]==1){
 			setBrick(i%5,0);
 		}
+
+		// Calibrate after each brick placement
 		if (letter[i]!=0){
 			moveToOrigin();
 		}
@@ -114,35 +89,36 @@ bool checkBrick()
 
 }
 
-//--------move printer head to origin--------//
+// Move printer head to origin
 void moveToOrigin(){
+	// make sure touch sensor is untriggered
+	driveGear(5,30,MoveMotor, MoveGear);
 	while(true)
 	{
-		if(SensorValue[touchOrigin] == 0){
+		if(SensorValue[touchOrigin] == 0)
 			motor[MoveMotor] = -20;
-		}
-		else {
+		else
 			break;
-		}
 	}
 	motor[MoveMotor] = 0;
-	wait1Msec(50);
-	driveGear(1,10,MoveMotor, MoveGear);
-	PlaySound(soundBlip);
+	// Shift head to bricks inventory
+	driveGear(3.5,10,MoveMotor, MoveGear);
+	PlaySound(soundShortBlip);
 }
 
+// Move head to idle position
 void moveToTop(){
 	while(true)
 	{
-		if(SensorValue[touchTop] == 0){
+		if(SensorValue[touchTop] == 0)
 			motor[LiftMotor] = -20;
-
-		}
-		else {
+		else
 			break;
-		}
 	}
 	motor[LiftMotor] = 0;
+	// To keep the distance(height) at minimum
+	driveGear(2,30,LiftMotor, LiftGear);
+	PlaySound(soundShortBlip);
 }
 
 
@@ -153,24 +129,14 @@ task main()
 	wait1Msec(1000);
 
 	moveToTop();
-	wait1Msec(50);
-	driveGear(7,30,LiftMotor, LiftGear);
-	PlaySound(soundBlip);
-	driveGear(5,30,MoveMotor, MoveGear);
-	PlaySound(soundBlip);
-
 	moveToOrigin();
-
 	wait1Msec(500);
 
 
 	int letter[5] =
 	{
-		0,0,0,1,1
+		1,0,0,1,1
 	};
-//moveConveyor(0x025);
-//getBarcode();
-	writeLetter(letter, sizeof(letter));
-//	driveNipple(5,30,LiftMotor);
 
+	writeLetter(letter, sizeof(letter));
 }
