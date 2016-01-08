@@ -46,8 +46,9 @@ void unload(int power)
 // Procedure called by remotely by printer
 void remote_move(ubyte data)
 {
+	PlaySound(soundBeepBeep);
 	int gearTeeth = data;
-	//driveDistance(gearTeeth, -30, motorB);
+	driveNipple(gearTeeth, -15, motorB);
 }
 
 
@@ -57,7 +58,8 @@ task main()
 	memset(nRcvHistogram,  0, sizeof(nRcvHistogram));
 	memset(nXmitHistogram, 0, sizeof(nXmitHistogram));
 	wait1Msec(2000);
-	//StartTask(sendMessages);
+	PlaySound(soundBeepBeep);
+	StartTask(sendMessages);
 
 	moveToStock();
 

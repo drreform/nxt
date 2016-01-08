@@ -37,6 +37,7 @@ const int kMaxSizeOfMessage = 6;
 const TMailboxIDs kQueueID = mailbox1;
 
 void readDataMsg();
+void remote_move(ubyte data);
 
 void sendDataMsg()
 {
