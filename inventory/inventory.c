@@ -26,8 +26,23 @@ int * getBarcode(){
 }
 
 
-
+int r,g,b;
+int R,G,B;
+int x;
 task main()
 {
+		short nAtoDValues[4];
+	short nRawValues[4];
+	while(true){
+		  getColorSensorData(colorSensor, colorAtoD,   &nAtoDValues[0]);
+  		getColorSensorData(colorSensor, colorRaw,    &nRawValues[0]);
+  		r = nAtoDValues[0];
+  		g = nAtoDValues[1];
+  		b = nAtoDValues[2];
+  		R = nRawValues[0];
+  		G = nRawValues[0];
+  		B = nRawValues[0];
+  		x = SensorValue[colorSensor];
+	}
 	getBarcode();
 }

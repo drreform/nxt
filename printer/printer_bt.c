@@ -1,6 +1,9 @@
 
 //#pragma platform(NXT)
 
+#include "../constants.c"
+#include "../motor.c"
+
 long nElapsedTime = 0;
 float fThroughput = 0;
 long nSendTotal = 0;
@@ -161,13 +164,13 @@ void readDataMsg()
 
 
 
-// test
+
 //task main()
 //{
 //	bNxtLCDStatusDisplay = true;
 //	memset(nRcvHistogram,  0, sizeof(nRcvHistogram));
 //	memset(nXmitHistogram, 0, sizeof(nXmitHistogram));
 //	wait1Msec(2000);
-//	moveConveyor(PRINTER, CONVEYOR, REQUEST, CONVEYOR_MOVE, 0x03);
+//	moveConveyor(0x03);
 //	return;
 //}

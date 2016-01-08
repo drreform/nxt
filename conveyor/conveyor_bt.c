@@ -108,6 +108,7 @@ void checkBTLinkConnected()
 // Demultiplexer
 void demux(ubyte *msg)
 {
+	PlaySound(soundBeepBeep);
 	int l =  msg[0];
 	for( int i=1; i<=l; i++){
 		nxtDisplayTextLine(i, "m: %x", msg[i]);
@@ -120,7 +121,7 @@ void demux(ubyte *msg)
 		remote_move(msg[5]);
 		break;
 	default:
-		PlaySound(soundBeepBeep);
+		PlaySound(soundException);
 		break;
 	}
 }

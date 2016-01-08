@@ -16,14 +16,30 @@ const float MoveGear = 24;
 
 void moveToOrigin();
 
+bool haveBrick(){
+	driveNipple(4.2,30,MoveMotor);
+	bool check = false;
+	if ( SensorValue[colorSensor] == REDCOLOR){
+		check = true;
+		PlaySound(soundBeepBeep);
+	} else {
+		while(true){
+			PlaySound(soundException);
+			wait1Msec(1000);
+		}
+	}
+	driveNipple(4.2,-30,MoveMotor);
+	return check;
+}
 
 //-------------setBrick-------------//
 void setBrick(int i, int j)
 {
 	// how deep should it go
-	const float down = 3;
+	const float down = 3.3;
 
 	//move down & up
+	haveBrick();
 	// loading
 	driveGear(down,15,LiftMotor, LiftGear);
 	wait1Msec(500);
@@ -32,7 +48,8 @@ void setBrick(int i, int j)
 	moveToOrigin(); // calibrate
 
 	// move to plate
-	driveNipple(i+6 ,20,MoveMotor);
+	driveNipple(i+5 ,20,MoveMotor);
+	driveGear(0.8,10,MoveMotor, MoveGear);
 	//driveGear(1,-20,MoveMotor, MoveGear);
 	wait1Msec(500);
 
@@ -44,13 +61,16 @@ void setBrick(int i, int j)
 	float vibr = 1;
 	int speed = 100;
 	driveGear(vibr,-speed,LiftMotor, LiftGear);
+	wait1Msec(50);
 	driveGear(vibr,speed,LiftMotor, LiftGear);
 	driveGear(vibr,-speed,LiftMotor, LiftGear);
+	wait1Msec(50);
 	driveGear(vibr,speed,LiftMotor, LiftGear);
 
 	wait1Msec(500);
 	driveGear(down,-30,LiftMotor, LiftGear);
 	wait1Msec(500);
+	haveBrick();
 }
 
 //-------------writeLetter-------------//
@@ -61,16 +81,14 @@ void writeLetter(int* letter, int size)
 	{
 		// move the conveyor
 		if (i!=0 && i%5==0){
-			//moveConveyor(0x01);
+			moveConveyor(0x01);
+			PlaySound(soundBeepBeep);
 			wait1Msec(500);
 		}
 
 		if (letter[i]==1){
 			setBrick(i%5,0);
-		}
-
-		// Calibrate after each brick placement
-		if (letter[i]!=0){
+			// Calibrate after each brick placement
 			moveToOrigin();
 		}
 	}
@@ -89,6 +107,8 @@ bool checkBrick()
 
 }
 
+
+
 // Move printer head to origin
 void moveToOrigin(){
 	// make sure touch sensor is untriggered
@@ -101,8 +121,9 @@ void moveToOrigin(){
 			break;
 	}
 	motor[MoveMotor] = 0;
+
 	// Shift head to bricks inventory
-	driveGear(3.5,10,MoveMotor, MoveGear);
+	driveGear(0.5,10,MoveMotor, MoveGear);
 	PlaySound(soundShortBlip);
 }
 
@@ -128,14 +149,18 @@ task main()
 {
 	wait1Msec(1000);
 
+	moveConveyor(0x01);
+	return;
+
 	moveToTop();
 	moveToOrigin();
 	wait1Msec(500);
 
 
-	int letter[5] =
+	int letter[10] =
 	{
-		1,0,0,1,1
+		1,0,0,0,1,
+		1,0,0,0,0
 	};
 
 	writeLetter(letter, sizeof(letter));

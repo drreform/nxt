@@ -1,4 +1,4 @@
-#pragma config(Sensor, S1,     touchSensor1,   sensorTouch)
+#pragma config(Sensor, S2,     touchSensor1,   sensorTouch)
 #pragma platform(NXT)
 /* DON'T TOUCH THE ABOVE CONFIGURATION */
 
@@ -6,21 +6,21 @@
 #include "../motor.c"
 #include "conveyor_bt.c"
 
-#define UnloadMotor motorA
-#define TransportMotor motorB
+#define UnloadMotor motorB
+#define TransportMotor motorC
 
 // Move conveyor to origin
 void moveToStock(){
 	while(true)
 	{
 		if(SensorValue[touchSensor1] == 0){
-			motor[motorB] = 40;
+			motor[TransportMotor] = 40;
 		}
 		else {
 			break;
 		}
 	}
-	motor[motorB] = 0;
+	motor[TransportMotor] = 0;
 }
 
 // Unload the plate
@@ -58,8 +58,9 @@ task main()
 	memset(nRcvHistogram,  0, sizeof(nRcvHistogram));
 	memset(nXmitHistogram, 0, sizeof(nXmitHistogram));
 	wait1Msec(2000);
+
+	//StartTask(sendMessages);
 	PlaySound(soundBeepBeep);
-	StartTask(sendMessages);
 
 	moveToStock();
 
