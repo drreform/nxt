@@ -39,7 +39,7 @@ const int kTimeBetweenXmit = 30;
 
 
 
-const int kMaxSizeOfMessage = 6;
+const int kMaxSizeOfMessage = 9;
 const TMailboxIDs kQueueID = mailbox1;
 
 void readDataMsg();
@@ -47,7 +47,7 @@ void readDataMsg();
 void sendDataMsg()
 {
     // {length, type, method, etc, etc, etc}
-    ubyte nXmitBuffer[kMaxSizeOfMessage] = {0x05, 0x01, 0x03, 0x07, 0x09, 0x11}; // For NXT-G compatability, last byte of message must be zero because of string messsages.
+    ubyte nXmitBuffer[kMaxSizeOfMessage] = {0x05, 0x01, 0x03, 0x07, 0x09, 0x11, 0x13, 0x15, 0x17}; // For NXT-G compatability, last byte of message must be zero because of string messsages.
     const bool bWaitForReply = false;
   TFileIOResult nBTCmdErrorStatus;
 
@@ -147,7 +147,8 @@ void readDataMsg()
             // Keep a running count of the number of messages successfully read
         nxtDisplayTextLine(6, "Read OK   %6d", ++nReadCnt);
         //int l =  nRcvBuffer[0];
-        nxtDisplayTextLine(7, "M:%x %x %x %x %x %x", nRcvBuffer[0], nRcvBuffer[1], nRcvBuffer[2], nRcvBuffer[3],  nRcvBuffer[4], nRcvBuffer[5]);
+        nxtDisplayTextLine(7, "M:%x %x %x %x %x %x %x %x %x",
+        	nRcvBuffer[0], nRcvBuffer[1], nRcvBuffer[2], nRcvBuffer[3],  nRcvBuffer[4], nRcvBuffer[5], nRcvBuffer[6], nRcvBuffer[7], nRcvBuffer[8]);
           fThroughput = nElapsedTime / (float) nReadCnt;
         }
       else
