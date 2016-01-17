@@ -1,6 +1,8 @@
 /*
 	Based on RobotC's predefined message format:
 	http://help.robotc.net/WebHelpArduino/index.htm#page=NXT_Functions_New/NXT_Bluetooth_Overview.htm
+
+	Raw message e.g.: 15 0 128 9 0 11 1 2 3 4 5 6 7 8 9 10 11
 */
 
 package main
@@ -78,6 +80,18 @@ func writeToBluetooth(b []byte, n *nxt.NXT) error {
 	return fmt.Errorf(reply.String())
 }
 
+// Read raw message
+func readFromBluetooth(n *nxt.NXT) ([]byte, int, error) {
+	res := make([]byte, 64)
+
+	reader := n.Connection()
+	numRead, err := reader.Read(res)
+	if err != nil {
+		return nil, 0, err
+	}
+	return res, numRead, nil
+}
+
 // Send a message in RobotC's sendMessageWithParm format. Readable via messageParm[].
 func sendMessageWithParms(messageParm1, messageParm2, messageParm3 int, n *nxt.NXT) error {
 	b, err := encodeMessageWithParm(messageParm1, messageParm2, messageParm3)
@@ -92,4 +106,34 @@ func sendMessageWithParms(messageParm1, messageParm2, messageParm3 int, n *nxt.N
 	log.Println(b)
 
 	return writeToBluetooth(b, n)
+}
+
+// Read a message sent in RobotC's sendMessageWithParm format.
+func readMessageWithParms(n *nxt.NXT) (int, int, int, error) {
+	res, size, err := readFromBluetooth(n)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+
+	if size != 10 || res[0] != 128 || res[1] != 9 || res[2] != 0 {
+		fmt.Println("Bad message:", res, size)
+		return 0, 0, 0, fmt.Errorf("Header is invalid")
+	}
+
+	fmt.Println("Read:", res, size)
+	length := int(res[3])
+	msg := res[4:10]
+
+	for i := 0; i < length; i++ {
+		fmt.Printf("%v ", msg[i])
+	}
+	fmt.Printf("\n")
+	param1, param2, param3, err := decodeMessageWithParm(msg)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	return param1, param2, param3, nil
+
+	//fmt.Println(calculateIntFromLSBAndMSB(msg[0], msg[1]), calculateIntFromLSBAndMSB(msg[2], msg[3]), calculateIntFromLSBAndMSB(msg[4], msg[5]))
+
 }

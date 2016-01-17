@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -16,10 +17,18 @@ const (
 	NXT_LOADER   = "NXT_3"
 )
 
-// Methods
+// Outgoing message methods
 const (
 	PLATE_LOAD = 10
 	PRINT      = 20
+)
+
+// Incoming message methods
+const (
+	PRINT_STARTED  = 20
+	PRINT_PROGRESS = 21
+	PRINT_FINISHED = 22
+	PRINT_ERROR    = 50
 )
 
 func sendPrintingJob(job JobRequest) error {
@@ -64,10 +73,38 @@ func jobQueue() {
 	}
 }
 
+// Validate a job and send it to queue
+func processIncomingMessage(method, payload, errorcode int) {
+	switch method {
+	case PRINT_PROGRESS:
+		Status.Status = "printing"
+		Status.Payload = fmt.Sprint(payload)
+	case PRINT_ERROR:
+		Status.Status = "printing"
+		Status.Payload = fmt.Sprint(payload)
+		Status.Error = fmt.Sprint(errorcode)
+	default:
+
+	}
+}
+
+// Listen to all registered devices
 func receiveStatusUpdates() {
-	ticker := time.NewTicker(time.Millisecond * 500)
-	for t := range ticker.C {
-		fmt.Println("Tick at", t)
+
+	for _, d := range Devices {
+		fmt.Println("Listening to", d)
+		go func(n *nxt.NXT) {
+			for {
+				//fmt.Println("Waiting for", n)
+				p1, p2, p3, err := readMessageWithParms(n)
+				if err != nil {
+					fmt.Println(err)
+				}
+				log.Printf("Message from %v-> %d %d %d", n, p1, p2, p3)
+				processIncomingMessage(p1, p2, p3)
+				//time.Sleep(time.Millisecond * 50)
+			}
+		}(d)
 	}
 }
 
@@ -80,7 +117,7 @@ var (
 func main() {
 	Devices = make(map[string]*nxt.NXT)
 	Devices["NXT_1"] = nxt.NewNXT("NXT_1", "COM13")
-	//Devices["NXT_2"] = nxt.NewNXT("NXT_2", "COM8")
+	Devices["NXT_2"] = nxt.NewNXT("NXT_2", "COM8")
 
 	// // n := nxt.NewNXT("NXT_1", "COM13")
 
