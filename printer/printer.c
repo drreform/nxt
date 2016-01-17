@@ -29,6 +29,7 @@ bool haveBrick(){
 		}
 	}
 	driveNipple(4.2,-30,MoveMotor);
+
 	return check;
 }
 
@@ -38,8 +39,13 @@ void setBrick(int i, int j)
 	// how deep should it go
 	const float down = 3.3;
 
-	//move down & up
-	haveBrick();
+	// Check ERROR1, if no brick wait 2,5 sec and check again
+	bool error1 = haveBrick();
+	while (error == false ){
+	// send to server error1 message
+	wait1Msec(2500);
+	error1 = haveBrick();
+	}
 	// loading
 	driveGear(down,15,LiftMotor, LiftGear);
 	wait1Msec(500);

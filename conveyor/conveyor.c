@@ -43,7 +43,7 @@ void unload(int power)
 	motor[UnloadMotor] = 0; //turn motor off
 }
 
-// Procedure called by remotely by printer
+// Procedure called remotely by printer
 void remote_move(ubyte data)
 {
 	PlaySound(soundBeepBeep);
