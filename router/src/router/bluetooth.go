@@ -69,15 +69,20 @@ func formatMessage(mailboxID int, message []byte) ([]byte, error) {
 // Send raw message
 func writeToBluetooth(b []byte, n *nxt.NXT) error {
 	log.Printf("Writing to device: %s", n)
-	replyChannel := make(chan *nxt.ReplyTelegram)
-	n.CommandChannel <- nxt.NewDirectCommand(0x09, b, replyChannel)
-	reply := <-replyChannel
-	log.Println(reply)
 
-	if reply.IsSuccess() {
-		return nil
-	}
-	return fmt.Errorf(reply.String())
+	n.CommandChannel <- nxt.NewDirectCommand(0x09, b, nil)
+
+	//replyChannel := make(chan *nxt.ReplyTelegram)
+	//n.CommandChannel <- nxt.NewDirectCommand(0x09, b, replyChannel)
+	// reply := <-replyChannel
+	// log.Println("Immediate reply:", reply)
+
+	// if reply.IsSuccess() {
+	// 	return nil
+	// }
+	// return fmt.Errorf(reply.String())
+
+	return nil
 }
 
 // Read raw message
@@ -98,42 +103,46 @@ func sendMessageWithParms(messageParm1, messageParm2, messageParm3 int, n *nxt.N
 	if err != nil {
 		return err
 	}
-	log.Println(b)
+	//log.Println(b)
 	b, err = formatMessage(0, b)
 	if err != nil {
 		return err
 	}
-	log.Println(b)
+	//log.Println(b)
 
 	return writeToBluetooth(b, n)
 }
 
 // Read a message sent in RobotC's sendMessageWithParm format.
 func readMessageWithParms(n *nxt.NXT) (int, int, int, error) {
-	res, size, err := readFromBluetooth(n)
+	raw, size, err := readFromBluetooth(n)
 	if err != nil {
 		return 0, 0, 0, err
 	}
 
-	if size != 10 || res[0] != 128 || res[1] != 9 || res[2] != 0 {
-		fmt.Println("Bad message:", res, size)
-		return 0, 0, 0, fmt.Errorf("Header is invalid")
+	if size == 3 && raw[0] == 2 && raw[1] == 9 && raw[2] == 0 {
+		log.Println("Got reply:", raw)
+		return 0, 0, 0, fmt.Errorf("")
 	}
 
-	fmt.Println("Read:", res, size)
-	length := int(res[3])
-	msg := res[4:10]
-
-	for i := 0; i < length; i++ {
-		fmt.Printf("%v ", msg[i])
+	if size != 10 || raw[0] != 128 || raw[1] != 9 || raw[2] != 0 {
+		fmt.Println("ERROR: Bad message:", raw, size)
+		return 0, 0, 0, fmt.Errorf("Header is invalid.")
 	}
-	fmt.Printf("\n")
+	res := raw[:size] // truncate trailing bytes
+	log.Println("Read:", size, res)
+
+	if int(res[3]) != 6 {
+		fmt.Printf("ERROR: Message is %v instead of 6 bytes: %v %v", size, res)
+		return 0, 0, 0, fmt.Errorf("Message is invalid.")
+	}
+
+	msg := res[4:] // truncate the header
+	log.Println("Params:", msg)
+
 	param1, param2, param3, err := decodeMessageWithParm(msg)
 	if err != nil {
 		return 0, 0, 0, err
 	}
 	return param1, param2, param3, nil
-
-	//fmt.Println(calculateIntFromLSBAndMSB(msg[0], msg[1]), calculateIntFromLSBAndMSB(msg[2], msg[3]), calculateIntFromLSBAndMSB(msg[4], msg[5]))
-
 }

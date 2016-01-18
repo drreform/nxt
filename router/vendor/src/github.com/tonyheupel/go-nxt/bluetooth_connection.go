@@ -3,7 +3,6 @@ package nxt
 import (
 	"github.com/tarm/goserial"
 	"io"
-	"fmt"
 )
 
 // bluetoothConnection represents the default connection to an NXT device.
@@ -65,7 +64,6 @@ func (b *bluetoothConnection) Write(p []byte) (n int, err error) {
 	bluetoothHeader := []byte{calculateLSB(telegramLength), calculateMSB(telegramLength)}
 
 	bluetoothMessage := append(bluetoothHeader, p...)
-	fmt.Println("BT MSG:", bluetoothMessage)
 
 	return b.conduit.Write(bluetoothMessage)
 }

@@ -11,24 +11,28 @@ import (
 	nxt "github.com/tonyheupel/go-nxt"
 )
 
+// Bluetooth message format
+// FFFF FFFF FFFF
+// ‭65535‬ ‭65535‬ ‭65535‬
+// method payload error
+
 const (
 	NXT_PRINTER  = "NXT_1"
 	NXT_CONVEYOR = "NXT_2"
 	NXT_LOADER   = "NXT_3"
 )
 
-// Outgoing message methods
+// Modular method headers
 const (
-	PLATE_LOAD = 10
-	PRINT      = 20
+	PRINTER   = 100
+	CONVEYOR  = 200
+	LOADER    = 300
+	WEBSERVER = 900
 )
 
-// Incoming message methods
 const (
-	PRINT_STARTED  = 20
-	PRINT_PROGRESS = 21
-	PRINT_FINISHED = 22
-	PRINT_ERROR    = 50
+	JOB_START = 201
+	JOB_DONE  = 901
 )
 
 func sendPrintingJob(job JobRequest) error {
@@ -38,7 +42,7 @@ func sendPrintingJob(job JobRequest) error {
 	i := int([]byte(job.Letter)[0])
 	fmt.Println(i)
 
-	err := sendMessageWithParms(PRINT, i, 0, Devices[NXT_PRINTER])
+	err := sendMessageWithParms(JOB_START, i, 0, Devices[NXT_CONVEYOR].n)
 	if err != nil {
 		fmt.Println("Can't send:", err)
 		return nil
@@ -46,6 +50,11 @@ func sendPrintingJob(job JobRequest) error {
 
 	return nil
 
+}
+
+func waitForDelivery() {
+	<-Delivered
+	log.Println("Job delivered.")
 }
 
 // Validate a job and send it to queue
@@ -68,6 +77,7 @@ func jobQueue() {
 		switch j.Type {
 		case "print":
 			sendPrintingJob(j)
+			waitForDelivery()
 		default:
 		}
 	}
@@ -75,55 +85,104 @@ func jobQueue() {
 
 // Validate a job and send it to queue
 func processIncomingMessage(method, payload, errorcode int) {
-	switch method {
-	case PRINT_PROGRESS:
-		Status.Status = "printing"
-		Status.Payload = fmt.Sprint(payload)
-	case PRINT_ERROR:
-		Status.Status = "printing"
-		Status.Payload = fmt.Sprint(payload)
-		Status.Error = fmt.Sprint(errorcode)
+	switch {
+	case method/WEBSERVER == 1: // Method 9xx
+		if method == JOB_DONE && Status.Method != JOB_DONE {
+			Delivered <- true
+		}
+		// Just save. Webserver pulls the data periodically.
+		Status = Message{method, payload, errorcode}
+
+	case method/PRINTER == 1: // Method 1xx
+		// forward to printer
+		Devices[NXT_PRINTER].queue <- Message{method, payload, errorcode}
+
+	case method/CONVEYOR == 1: // Method 2xx
+		// forward to conveyor
+		Devices[NXT_CONVEYOR].queue <- Message{method, payload, errorcode}
+
+	case method/LOADER == 1: // Method 3xx
+		// forward to loader
+		Devices[NXT_LOADER].queue <- Message{method, payload, errorcode}
+
 	default:
+		fmt.Println("ERROR: Invalid method in message:", method, payload, errorcode)
 
 	}
 }
 
 // Listen to all registered devices
-func receiveStatusUpdates() {
+func BT_Forwarder() {
 
 	for _, d := range Devices {
-		fmt.Println("Listening to", d)
+		fmt.Println("Forwarding to", d.n)
+		go func(d Device) {
+			for m := range d.queue {
+				log.Printf("Forwarding message `%v %v %v` to %v", m.Method, m.Payload, m.Errorcode, d.n)
+				err := sendMessageWithParms(m.Method, m.Payload, m.Errorcode, d.n)
+				if err != nil {
+					fmt.Println("ERROR: Can't send:", err)
+				}
+				time.Sleep(time.Millisecond * 1000)
+			}
+		}(d)
+	}
+}
+
+// Listen to all registered devices
+func BT_Listenner() {
+
+	for _, d := range Devices {
+		fmt.Println("Listening to", d.n)
 		go func(n *nxt.NXT) {
 			for {
 				//fmt.Println("Waiting for", n)
 				p1, p2, p3, err := readMessageWithParms(n)
 				if err != nil {
 					fmt.Println(err)
+					continue
 				}
-				log.Printf("Message from %v-> %d %d %d", n, p1, p2, p3)
+				log.Printf("%v: `%d %d %d`", n, p1, p2, p3)
 				processIncomingMessage(p1, p2, p3)
 				//time.Sleep(time.Millisecond * 50)
 			}
-		}(d)
+		}(d.n)
 	}
 }
 
 var (
-	Status   StatusReply
-	JobQueue chan JobRequest
-	Devices  map[string]*nxt.NXT
+	Status    Message
+	JobQueue  chan JobRequest
+	Delivered chan bool
+	Devices   map[string]Device
 )
 
-func main() {
-	Devices = make(map[string]*nxt.NXT)
-	Devices["NXT_1"] = nxt.NewNXT("NXT_1", "COM13")
-	Devices["NXT_2"] = nxt.NewNXT("NXT_2", "COM8")
+type Message struct {
+	Method    int `json:"method"`
+	Payload   int `json:"payload"`
+	Errorcode int `json:"error"`
+}
 
-	// // n := nxt.NewNXT("NXT_1", "COM13")
+type Device struct {
+	n     *nxt.NXT
+	queue chan Message
+}
+
+func NewDevice(name, port string) Device {
+	return Device{
+		n:     nxt.NewNXT(name, port),
+		queue: make(chan Message),
+	}
+}
+
+func main() {
+	Devices = make(map[string]Device)
+	Devices[NXT_PRINTER] = NewDevice("NXT_1", "COM13")
+	Devices[NXT_CONVEYOR] = NewDevice("NXT_2", "COM8")
 
 	for _, d := range Devices {
-		fmt.Println(d)
-		err := d.Connect()
+		fmt.Println(d.n)
+		err := d.n.Connect()
 		if err != nil {
 			fmt.Println("Could not connect:", err)
 			return
@@ -131,44 +190,11 @@ func main() {
 		fmt.Println("Connected!")
 	}
 
-	// for _, d := range devices {
-	// 	err := sendMessageWithParms(1, 2, 3, d)
-	// 	if err != nil {
-	// 		fmt.Println("Can't send:", err)
-	// 		return
-	// 	}
-	// }
-
-	// bs := make([]byte, 10)
-
-	// bs[0] = 0x00 // mailbox number
-	// bs[1] = 0x07 // message length including null terminator
-	// bs[2] = 0x01
-	// bs[3] = 0x02
-	// bs[4] = 10
-	// bs[5] = 11
-	// bs[6] = 0x05
-	// bs[7] = 0x06
-
-	// 6 bytes
-	// FF FF FF FF FF FF
-	// type method payload payload payload error
-
-	// FFFF FFFF FFFF
-	// method payload error
-
-	// for _, d := range devices {
-	// 	err := sendMessageWithParms(1, 2, 3, d)
-	// 	if err != nil {
-	// 		fmt.Println("Can't send:", err)
-	// 		return
-	// 	}
-	// }
-
-	Status.Status = "idle"
-	JobQueue = make(chan JobRequest)
+	JobQueue = make(chan JobRequest, 10)
+	Delivered = make(chan bool)
 	go jobQueue()
-	go receiveStatusUpdates()
+	BT_Listenner()
+	BT_Forwarder()
 
 	router := setupRouter()
 	// start http server
@@ -180,70 +206,22 @@ func main() {
 		}
 	}()
 
-	// err = sendMessageWithParms(255, 256, 257, n)
-	// if err != nil {
-	// 	fmt.Println("Can't send:", err)
-	// 	return
-	// }
-
-	// fmt.Println("lets read something..")
-	// reader := n.Connection()
-	// reading := true
-	// go func() {
-	// 	for reading {
-	// 		res := make([]byte, 64)
-
-	// 		numRead, err := reader.Read(res)
-	// 		if err != nil {
-	// 			fmt.Println("Could not read:", err)
-	// 			break
-	// 		}
-	// 		if res[0] == 128 {
-	// 			fmt.Println("Reply:", numRead, res)
-	// 			length := int(res[3])
-	// 			msg := res[4:]
-
-	// 			for i := 0; i < length; i++ {
-	// 				fmt.Printf("%v ", msg[i])
-	// 			}
-	// 			fmt.Printf("\n")
-	// 			fmt.Println(calculateIntFromLSBAndMSB(msg[0], msg[1]), calculateIntFromLSBAndMSB(msg[2], msg[3]), calculateIntFromLSBAndMSB(msg[4], msg[5]))
-
-	// 		}
-	// 		// 15 0 128 9 0 11 1 2 3 4 5 6 7 8 9 10 11
-
-	// 		//fmt.Println("Reply:", numRead, res)
-
-	// 	}
-	// }()
-
-	// Use a more traditional-looking method/check-for-error style
-	//methodStyle(n)
-
-	// Pause in between styles to ensure the old commands are done executing
-	//time.Sleep(5 * time.Second)
-
-	// Use the raw channels style
-	//channelStyle(n)
-
 	// Ctrl+C handling
 	handler := make(chan os.Signal, 1)
 	signal.Notify(handler, os.Interrupt, os.Kill)
 	<-handler // block the thread
 	fmt.Println("^C Shutting down...")
-	//reading = false
-	time.Sleep(2 * time.Second)
 
+	// Disconnect all devices
 	for _, d := range Devices {
-		fmt.Println("Disconnecting", d)
-		err := d.Disconnect()
+		fmt.Println("Disconnecting", d.n)
+		err := d.n.Disconnect()
 		if err != nil {
 			fmt.Println("Could not disconnect:", err)
 			return
 		}
 		time.Sleep(2 * time.Second)
 	}
-
 	time.Sleep(5 * time.Second)
 
 	os.Exit(1)
