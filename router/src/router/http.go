@@ -21,6 +21,10 @@ type StatusReply struct {
 	Error   string `json:"error"`
 }
 
+type ErrorReply struct {
+	Error string `json:"error"`
+}
+
 func setupRouter() *mux.Router {
 	router := mux.NewRouter().StrictSlash(true)
 	router.Path("/").HandlerFunc(homeHandler)
@@ -47,13 +51,21 @@ func jobHandler(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(body, &job)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "Bad Request: %v", err.Error())
+
+		Error := ErrorReply{fmt.Sprintf("Bad Request: %v", err.Error())}
+		b, _ := json.Marshal(&Error)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(b)
 		return
 	}
 	err = processJob(job)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "Bad Job: %v", err.Error())
+
+		Error := ErrorReply{fmt.Sprintf("Bad Job: %v", err.Error())}
+		b, _ := json.Marshal(&Error)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(b)
 		return
 	}
 
