@@ -2,12 +2,24 @@
 	Based on RobotC's predefined message format:
 	http://help.robotc.net/WebHelpArduino/index.htm#page=NXT_Functions_New/NXT_Bluetooth_Overview.htm
 
+	NXT's Bluetooth Protocol:
+	https://github.com/CSCWLab2015/nxt/blob/master/router/Appendix_2-LEGO_MINDSTORMS_NXT_Direct_commands.pdf
+
+	Go driver used for NXT direct commands:
+	https://github.com/heupel/go-nxt
+
 	Raw message e.g.: 15 0 128 9 0 11 1 2 3 4 5 6 7 8 9 10 11
+
+	// raw[0:2]: Bluetooth header: Length
+	// raw[2]: Requires reply 0x00 or not 0x80
+	// raw[3]: Message type. Code is 0x09 for text messages
+	// raw[4]: Mailbox number 0x00-0x09 / Error > 0x00 [Appendix_2 pg.12]
 */
 
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 
@@ -66,14 +78,36 @@ func formatMessage(mailboxID int, message []byte) ([]byte, error) {
 	return formatted, nil
 }
 
+const (
+	TextMessage             byte = 0x09
+	MessageRequiresResponse      = 0x00
+	Reply                        = 0x02
+	MessageNoResponse            = 0x80
+)
+
 // Send raw message
 func writeToBluetooth(b []byte, n *nxt.NXT) error {
-	log.Printf("Writing to device: %s", n)
+	log.Printf("Writing to <%s> message: %v", n, b)
 
-	n.CommandChannel <- nxt.NewDirectCommand(0x09, b, nil)
+	//n.CommandChannel <- nxt.NewDirectCommand(0x09, b, nil)
+	header := []byte{MessageRequiresResponse, TextMessage}
 
-	//replyChannel := make(chan *nxt.ReplyTelegram)
-	//n.CommandChannel <- nxt.NewDirectCommand(0x09, b, replyChannel)
+	reader := n.Connection()
+	_, err := reader.Write(append(header, b...))
+	if err != nil {
+		return err
+	}
+
+	reply := nxt.ReplyStatus(<-AckChannel)
+	log.Println("Status:", reply)
+
+	if reply == nxt.Success {
+		return nil
+	}
+	return fmt.Errorf(reply.String())
+
+	// replyChannel := make(chan *nxt.ReplyTelegram)
+	// n.CommandChannel <- nxt.NewDirectCommand(0x09, b, replyChannel)
 	// reply := <-replyChannel
 	// log.Println("Immediate reply:", reply)
 
@@ -82,7 +116,7 @@ func writeToBluetooth(b []byte, n *nxt.NXT) error {
 	// }
 	// return fmt.Errorf(reply.String())
 
-	return nil
+	//return nil
 }
 
 // Read raw message
@@ -113,6 +147,8 @@ func sendMessageWithParms(messageParm1, messageParm2, messageParm3 int, n *nxt.N
 	return writeToBluetooth(b, n)
 }
 
+var NotAMessage = errors.New("Not a message.")
+
 // Read a message sent in RobotC's sendMessageWithParm format.
 func readMessageWithParms(n *nxt.NXT) (int, int, int, error) {
 	raw, size, err := readFromBluetooth(n)
@@ -120,17 +156,19 @@ func readMessageWithParms(n *nxt.NXT) (int, int, int, error) {
 		return 0, 0, 0, err
 	}
 
-	if size == 3 && raw[0] == 2 && raw[1] == 9 && raw[2] == 0 {
-		log.Println("Got reply:", raw)
-		return 0, 0, 0, fmt.Errorf("")
+	//log.Println("raw:", raw)
+	if size == 3 && raw[0] == Reply && raw[1] == TextMessage {
+		status := raw[2]
+		AckChannel <- status
+		return 0, 0, 0, NotAMessage
 	}
 
-	if size != 10 || raw[0] != 128 || raw[1] != 9 || raw[2] != 0 {
+	if size != 10 || raw[0] != MessageNoResponse || raw[1] != TextMessage {
 		fmt.Println("ERROR: Bad message:", raw, size)
 		return 0, 0, 0, fmt.Errorf("Header is invalid.")
 	}
 	res := raw[:size] // truncate trailing bytes
-	log.Println("Read:", size, res)
+	//log.Println("Read:", size, res)
 
 	if int(res[3]) != 6 {
 		fmt.Printf("ERROR: Message is %v instead of 6 bytes: %v %v", size, res)
@@ -138,7 +176,7 @@ func readMessageWithParms(n *nxt.NXT) (int, int, int, error) {
 	}
 
 	msg := res[4:] // truncate the header
-	log.Println("Params:", msg)
+	//log.Println("Read params:", msg)
 
 	param1, param2, param3, err := decodeMessageWithParm(msg)
 	if err != nil {

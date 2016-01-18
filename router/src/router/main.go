@@ -14,7 +14,7 @@ import (
 // Bluetooth message format
 // FFFF FFFF FFFF
 // ‭65535‬ ‭65535‬ ‭65535‬
-// method payload error
+// receiver method payload
 
 const (
 	NXT_PRINTER  = "NXT_1"
@@ -22,39 +22,65 @@ const (
 	NXT_LOADER   = "NXT_3"
 )
 
-// Modular method headers
-const (
-	PRINTER   = 100
-	CONVEYOR  = 200
-	LOADER    = 300
-	WEBSERVER = 900
+var (
+	// Registered NXTs
+	Devices map[string]Device
+	// Status of current job
+	Status StatusReply
+	// Queue for job requests
+	JobQueue chan JobRequest
+	// Track job delivery
+	JobDone chan int
+	// Acknowledge delivery of bluetooth message
+	AckChannel chan byte
 )
 
-const (
-	JOB_START = 201
-	JOB_DONE  = 901
-)
+// Format of bluetooth message
+type Message struct {
+	receiver int
+	method   int
+	payload  int
+}
 
+type Device struct {
+	n *nxt.NXT
+	// Queue for bluetooth messages
+	queue chan Message
+}
+
+func NewDevice(name, port string) Device {
+	return Device{
+		n:     nxt.NewNXT(name, port),
+		queue: make(chan Message),
+	}
+}
+
+// Send new printing job to the conveyor
 func sendPrintingJob(job JobRequest) error {
 
-	fmt.Println([]byte(job.Letter))
-
 	i := int([]byte(job.Letter)[0])
-	fmt.Println(i)
+	log.Println("Sending job:", i)
 
-	err := sendMessageWithParms(JOB_START, i, 0, Devices[NXT_CONVEYOR].n)
+	err := sendMessageWithParms(CONVEYOR, JOB_START, i, Devices[NXT_CONVEYOR].n)
 	if err != nil {
-		fmt.Println("Can't send:", err)
+		fmt.Println("ERROR: Can't send:", err)
+		JobDone <- -1
+		Status = StatusReply{BLUETOOTH_ERROR, 0, err.Error()}
 		return nil
 	}
+	Status = StatusReply{JOB_SUBMITTED, 0, ""}
 
 	return nil
 
 }
 
+// Wait for job to be delivered (finished production)
 func waitForDelivery() {
-	<-Delivered
-	log.Println("Job delivered.")
+	status := <-JobDone
+	if status == 1 {
+		log.Println("Job is finished.")
+		Status = StatusReply{JOB_DONE, 0, ""}
+	}
 }
 
 // Validate a job and send it to queue
@@ -72,11 +98,12 @@ func processJob(j JobRequest) error {
 	return nil
 }
 
+// Queue for requested jobs
 func jobQueue() {
 	for j := range JobQueue {
 		switch j.Type {
 		case "print":
-			sendPrintingJob(j)
+			go sendPrintingJob(j)
 			waitForDelivery()
 		default:
 		}
@@ -84,42 +111,49 @@ func jobQueue() {
 }
 
 // Validate a job and send it to queue
-func processIncomingMessage(method, payload, errorcode int) {
+func processIncomingMessage(receiver, method, payload int) {
 	switch {
-	case method/WEBSERVER == 1: // Method 9xx
+	case receiver == WEBSERVER:
 		if method == JOB_DONE && Status.Method != JOB_DONE {
-			Delivered <- true
+			JobDone <- 1
 		}
 		// Just save. Webserver pulls the data periodically.
-		Status = Message{method, payload, errorcode}
+		if method/METHOD_ERROR == 1 {
+			Status = StatusReply{method, payload, fmt.Sprintf("Error ", method)}
+		} else if method/METHOD_STATUS == 1 {
+			Status = StatusReply{method, payload, ""}
+		} else {
+			fmt.Println("ERROR: Unknown method for Web Server.")
+		}
 
-	case method/PRINTER == 1: // Method 1xx
+	case receiver == PRINTER:
 		// forward to printer
-		Devices[NXT_PRINTER].queue <- Message{method, payload, errorcode}
+		Devices[NXT_PRINTER].queue <- Message{receiver, method, payload}
 
-	case method/CONVEYOR == 1: // Method 2xx
+	case receiver == CONVEYOR:
 		// forward to conveyor
-		Devices[NXT_CONVEYOR].queue <- Message{method, payload, errorcode}
+		Devices[NXT_CONVEYOR].queue <- Message{receiver, method, payload}
 
-	case method/LOADER == 1: // Method 3xx
+	case receiver == LOADER:
 		// forward to loader
-		Devices[NXT_LOADER].queue <- Message{method, payload, errorcode}
+		Devices[NXT_LOADER].queue <- Message{receiver, method, payload}
 
 	default:
-		fmt.Println("ERROR: Invalid method in message:", method, payload, errorcode)
+		fmt.Println("ERROR: Invalid receiver in message:", receiver, method, payload)
 
 	}
 }
 
-// Listen to all registered devices
+// Forward messages to designated devices.
+// Messages are throttle for each receiver to ensure delivery
 func BT_Forwarder() {
 
 	for _, d := range Devices {
 		fmt.Println("Forwarding to", d.n)
 		go func(d Device) {
 			for m := range d.queue {
-				log.Printf("Forwarding message `%v %v %v` to %v", m.Method, m.Payload, m.Errorcode, d.n)
-				err := sendMessageWithParms(m.Method, m.Payload, m.Errorcode, d.n)
+				log.Printf("Forwarding to <%v> message `%v %v %v`", d.n, m.receiver, m.method, m.payload)
+				err := sendMessageWithParms(m.receiver, m.method, m.payload, d.n)
 				if err != nil {
 					fmt.Println("ERROR: Can't send:", err)
 				}
@@ -139,39 +173,16 @@ func BT_Listenner() {
 				//fmt.Println("Waiting for", n)
 				p1, p2, p3, err := readMessageWithParms(n)
 				if err != nil {
-					fmt.Println(err)
+					if err != NotAMessage {
+						fmt.Println("ERROR: Can't read:", err.Error())
+					}
 					continue
 				}
-				log.Printf("%v: `%d %d %d`", n, p1, p2, p3)
+				log.Printf("<%v>: `%d %d %d`", n, p1, p2, p3)
 				processIncomingMessage(p1, p2, p3)
 				//time.Sleep(time.Millisecond * 50)
 			}
 		}(d.n)
-	}
-}
-
-var (
-	Status    Message
-	JobQueue  chan JobRequest
-	Delivered chan bool
-	Devices   map[string]Device
-)
-
-type Message struct {
-	Method    int `json:"method"`
-	Payload   int `json:"payload"`
-	Errorcode int `json:"error"`
-}
-
-type Device struct {
-	n     *nxt.NXT
-	queue chan Message
-}
-
-func NewDevice(name, port string) Device {
-	return Device{
-		n:     nxt.NewNXT(name, port),
-		queue: make(chan Message),
 	}
 }
 
@@ -191,7 +202,9 @@ func main() {
 	}
 
 	JobQueue = make(chan JobRequest, 10)
-	Delivered = make(chan bool)
+	JobDone = make(chan int)
+	AckChannel = make(chan byte)
+	Status = StatusReply{METHOD_ERROR, 0, "No records of previous jobs."}
 	go jobQueue()
 	BT_Listenner()
 	BT_Forwarder()
@@ -205,6 +218,7 @@ func main() {
 			os.Exit(1)
 		}
 	}()
+	fmt.Println("Started HTTP Server.")
 
 	// Ctrl+C handling
 	handler := make(chan os.Signal, 1)
@@ -220,9 +234,8 @@ func main() {
 			fmt.Println("Could not disconnect:", err)
 			return
 		}
-		time.Sleep(2 * time.Second)
 	}
-	time.Sleep(5 * time.Second)
+	//time.Sleep(5 * time.Second)
 
 	os.Exit(1)
 }

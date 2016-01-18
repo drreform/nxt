@@ -15,6 +15,12 @@ type JobRequest struct {
 	Letter string `json:"letter"`
 }
 
+type StatusReply struct {
+	Method  int    `json:"method"`
+	Payload int    `json:"payload"`
+	Error   string `json:"error"`
+}
+
 func setupRouter() *mux.Router {
 	router := mux.NewRouter().StrictSlash(true)
 	router.Path("/").HandlerFunc(homeHandler)
