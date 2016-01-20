@@ -1,6 +1,6 @@
-#pragma config(Sensor, S1, colorSensor, sensorCOLORFULL)
-#pragma config(Sensor, S3, touchTop, sensorTouch)
-#pragma config(Sensor, S4, touchOrigin, sensorTouch)
+#pragma config(Sensor, S2, colorSensor, sensorCOLORFULL)
+#pragma config(Sensor, S4, touchTop, sensorTouch)
+#pragma config(Sensor, S1, touchOrigin, sensorTouch)
 //#pragma platform(NXT)
 /* DON'T TOUCH THE ABOVE CONFIGURATION */
 
