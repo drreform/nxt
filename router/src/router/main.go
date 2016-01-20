@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -186,10 +187,30 @@ func BT_Listenner() {
 	}
 }
 
+var (
+	nxt1 = flag.String("nxt1", "", "Printer's serial port")
+	nxt2 = flag.String("nxt2", "", "Conveyor's serial port")
+	nxt3 = flag.String("nxt3", "", "Loader's serial port")
+)
+
 func main() {
+	flag.Parse()
+
 	Devices = make(map[string]Device)
-	Devices[NXT_PRINTER] = NewDevice("NXT_1", "COM13")
-	Devices[NXT_CONVEYOR] = NewDevice("NXT_2", "COM8")
+	if *nxt1 != "" {
+		Devices[NXT_PRINTER] = NewDevice("NXT_1", *nxt1)
+	}
+	if *nxt2 != "" {
+		Devices[NXT_CONVEYOR] = NewDevice("NXT_2", *nxt2)
+	}
+	if *nxt3 != "" {
+		Devices[NXT_LOADER] = NewDevice("NXT_3", *nxt3)
+	}
+	if len(Devices) == 0 {
+		flag.Usage()
+		fmt.Println("Hint: On Windows, outgoing `Dev B` COM Port should be used.")
+		os.Exit(1)
+	}
 
 	for _, d := range Devices {
 		fmt.Println(d.n)
