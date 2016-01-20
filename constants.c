@@ -1,28 +1,26 @@
-// Devices
-#define PLATES 0xA0
-#define BRICKS 0xA1
-#define PRINTER 0xA2
-#define CONVEYOR 0xA3
-#define DELIVERY 0xA4
+// Devices /////////
+#define PRINTER 1
+#define CONVEYOR 2
+#define LOADER 3
+#define WEBSERVER 9
+////////////////////
 
-// Method types
-#define REQUEST 0x01
-#define REPLY 0x02
+// Status Codes
+#define	STT_METHOD 800
+#define STT_JOB_SUBMITTED 801
+#define STT_JOB_STARTED 802
+#define STT_JOB_DONE 803
 
-// Methods
+// Error Codes
+#define ERR_METHOD  900
+#define ERR_NO_BRICKS 910
+#define ERR_BRICK_NOT_PICKED 911
+#define ERR_BRICK_NOT_PLUGGED 912
+#define ERR_BRICK_MISPLUGGED 913
 
-#define CONVEYOR_MOVE 0x02
-
-// Errors
-
-#define ERROR1 0xE1
-#define ERROR2 0xE2
-#define ERROR3 0xE3
-#define ERROR4 0xE4
-
-// Status
-#define POGRESS 0xB1
-#define PLOADED 0xB2 	// "Plate loaded on conveyor"
-#define STARTPRINT 0xB3 // "Printing Start"
-#define PRINTDONE 0xB4 // "Printing Done"
-#define PCOLLECTION 0xB5 // "Plate read for collection"
+// Commands
+#define CONVEYOR_JOB_START 201
+#define CONVEYOR_JOB_DONE 202
+#define CONVEYOR_JOB_DISCARD 203
+#define CONVEYOR_MOVE 210
+#define PRINTER_PRINT 101

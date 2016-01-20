@@ -4,9 +4,8 @@
 //#pragma platform(NXT)
 /* DON'T TOUCH THE ABOVE CONFIGURATION */
 
-#include "../constants.c"
+#include "../constants.h"
 #include "../motor.c"
-#include "printer_bt.c"
 
 // Constants
 #define LiftMotor motorA
@@ -16,13 +15,35 @@ const float MoveGear = 24;
 
 void moveToOrigin();
 
+task listenToBluetooth(){
+	int receiver, method, payload;
+	while(true)
+	{
+		receiver = messageParm[0];
+		method = messageParm[1];
+		payload = messageParm[2];
+		if(receiver != 0 || method	!= 0 || payload != 0){
+			PlaySound(soundBlip);
+			switch(method){
+				//case METHOD:
+				//	break;
+			default:
+				PlaySound(soundException);
+				// method not supported
+			}
+			ClearMessage();
+		}
+		wait1Msec(500);
+	}
+}
+
 bool haveBrick(){
 	driveNipple(4.2,30,MoveMotor);
 	bool check = false;
 	if ( SensorValue[colorSensor] == REDCOLOR){
 		check = true;
 		PlaySound(soundBeepBeep);
-	} else {
+		} else {
 		while(true){
 			PlaySound(soundException);
 			wait1Msec(1000);
@@ -42,9 +63,9 @@ void setBrick(int i, int j)
 	// Check ERROR1, if no brick wait 2,5 sec and check again
 	bool error1 = haveBrick();
 	while (error == false ){
-	// send to server error1 message
-	wait1Msec(2500);
-	error1 = haveBrick();
+		// send to server error1 message
+		wait1Msec(2500);
+		error1 = haveBrick();
 	}
 	// loading
 	driveGear(down,15,LiftMotor, LiftGear);
@@ -87,7 +108,7 @@ void writeLetter(int* letter, int size)
 	{
 		// move the conveyor
 		if (i!=0 && i%5==0){
-			moveConveyor(0x01);
+			sendMessageWithParm(CONVEYOR, CONVEYOR_MOVE, 1);
 			PlaySound(soundBeepBeep);
 			wait1Msec(500);
 		}
@@ -106,7 +127,7 @@ void writeLetter(int* letter, int size)
 bool checkBrick()
 {
 	if 	(SensorValue [ colorSensor ] == WHITECOLOR){
-	return true;
+		return true;
 	}
 	else
 		return false;
@@ -153,10 +174,7 @@ void moveToTop(){
 
 task main()
 {
-	wait1Msec(1000);
-
-	moveConveyor(0x01);
-	return;
+	StartTask(listenToBluetooth);
 
 	moveToTop();
 	moveToOrigin();
@@ -170,4 +188,6 @@ task main()
 	};
 
 	writeLetter(letter, sizeof(letter));
+
+	while(true){wait10Msec(100);}
 }
