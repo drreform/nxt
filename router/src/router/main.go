@@ -18,20 +18,15 @@ import (
 // receiver method payload
 
 const (
-	NXT_PRINTER  = "NXT_1"
-	NXT_CONVEYOR = "NXT_2"
-	NXT_LOADER   = "NXT_3"
+	NXT_PRINTER   = "NXT_1"
+	NXT_CONVEYOR  = "NXT_2"
+	NXT_LOADER    = "NXT_3"
+	WEBSERVER_URL = "http://localhost:8080/status"
 )
 
 var (
 	// Registered NXTs
 	Devices map[string]Device
-	// Status of current job
-	Status StatusReply
-	// Queue for job requests
-	JobQueue chan JobRequest
-	// Track job delivery
-	JobDone chan int
 	// Acknowledge delivery of bluetooth message
 	AckChannel chan byte
 )
@@ -58,73 +53,42 @@ func NewDevice(name, port string) Device {
 
 // Send new printing job to the conveyor
 func sendPrintingJob(job JobRequest) error {
+	if len(job.Letter) != 1 {
+		return fmt.Errorf("Requested letter must be 1 character, not %v.", len(job.Letter))
+	}
 
 	i := int([]byte(job.Letter)[0])
 	log.Println("Sending job:", i)
 
 	err := sendMessageWithParms(CONVEYOR, JOB_START, i, Devices[NXT_CONVEYOR].n)
 	if err != nil {
-		fmt.Println("ERROR: Can't send:", err)
-		JobDone <- -1
-		Status = StatusReply{BLUETOOTH_ERROR, 0, err.Error()}
-		return nil
+		fmt.Printf("ERROR: Couldn't send job over bluetooth: %v\n", err.Error())
+		return fmt.Errorf("Couldn't send job over bluetooth: %v", err.Error())
 	}
-	Status = StatusReply{JOB_SUBMITTED, 0, ""}
 
 	return nil
-
-}
-
-// Wait for job to be delivered (finished production)
-func waitForDelivery() {
-	status := <-JobDone
-	if status == 1 {
-		log.Println("Job is finished.")
-		Status = StatusReply{JOB_DONE, 0, ""}
-	}
 }
 
 // Validate a job and send it to queue
 func processJob(j JobRequest) error {
 	switch j.Type {
 	case "print":
-		if len(j.Letter) != 1 {
-			return fmt.Errorf("Requested letter must be 1 character, not %v.", len(j.Letter))
-		}
+		return sendPrintingJob(j)
 	default:
 		return fmt.Errorf("Job type missing or unsupported: %v", j.Type)
 	}
-	// add to job queue
-	JobQueue <- j
 	return nil
-}
-
-// Queue for requested jobs
-func jobQueue() {
-	for j := range JobQueue {
-		switch j.Type {
-		case "print":
-			go sendPrintingJob(j)
-			waitForDelivery()
-		default:
-		}
-	}
 }
 
 // Validate a job and send it to queue
 func processIncomingMessage(receiver, method, payload int) {
 	switch {
 	case receiver == WEBSERVER:
-		if method == JOB_DONE && Status.Method != JOB_DONE {
-			JobDone <- 1
-		}
-		// Just save. Webserver pulls the data periodically.
-		if method/METHOD_ERROR == 1 {
-			Status = StatusReply{method, payload, fmt.Sprintf("Error ", method)}
-		} else if method/METHOD_STATUS == 1 {
-			Status = StatusReply{method, payload, ""}
-		} else {
-			fmt.Println("ERROR: Unknown method for Web Server.")
+		log.Printf("Forwarding to Webserver message `%v %v %v`", receiver, method, payload)
+		// forward to webserver
+		err := postStatus(time.Now(), method, payload)
+		if err != nil {
+			fmt.Println("ERROR: Unable to post to webserver: ", err.Error())
 		}
 
 	case receiver == PRINTER:
@@ -222,11 +186,7 @@ func main() {
 		fmt.Println("Connected!")
 	}
 
-	JobQueue = make(chan JobRequest, 10)
-	JobDone = make(chan int)
 	AckChannel = make(chan byte)
-	Status = StatusReply{METHOD_ERROR, 0, "No records of previous jobs."}
-	go jobQueue()
 	BT_Listenner()
 	BT_Forwarder()
 

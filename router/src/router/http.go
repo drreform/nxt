@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -16,9 +18,9 @@ type JobRequest struct {
 }
 
 type StatusReply struct {
-	Method  int    `json:"method"`
-	Payload int    `json:"payload"`
-	Error   string `json:"error"`
+	Time    int64 `json:"time"`
+	Method  int   `json:"method"`
+	Payload int   `json:"payload"`
 }
 
 type ErrorReply struct {
@@ -28,7 +30,6 @@ type ErrorReply struct {
 func setupRouter() *mux.Router {
 	router := mux.NewRouter().StrictSlash(true)
 	router.Path("/").HandlerFunc(homeHandler)
-	router.Methods("GET").Path("/status/{id}").HandlerFunc(statusHandler)
 	router.Methods("POST").Path("/job").HandlerFunc(jobHandler)
 
 	return router
@@ -62,7 +63,7 @@ func jobHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 
-		Error := ErrorReply{fmt.Sprintf("Bad Job: %v", err.Error())}
+		Error := ErrorReply{err.Error()}
 		b, _ := json.Marshal(&Error)
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(b)
@@ -72,13 +73,23 @@ func jobHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 }
 
-func statusHandler(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	id := params["id"]
-	log.Printf("Getting status of item %v", id)
+func postStatus(t time.Time, method, payload int) error {
+	s := &StatusReply{
+		Time:    t.UnixNano(),
+		Method:  method,
+		Payload: payload,
+	}
+	body, err := json.Marshal(s)
+	if err != nil {
+		return err
+	}
 
-	// Currently, item id is ignored. Assume only one item is processed at a time.
-	b, _ := json.Marshal(&Status)
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(b)
+	res, err := http.Post(WEBSERVER_URL, "application/json", bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	if res.StatusCode != http.StatusOK {
+		return fmt.Errorf("Status is %v:%v", res.Status, res.StatusCode)
+	}
+	return nil
 }
