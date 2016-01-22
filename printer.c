@@ -4,8 +4,9 @@
 //#pragma platform(NXT)
 /* DON'T TOUCH THE ABOVE CONFIGURATION */
 
-#include "../constants.h"
-#include "../motor.c"
+#include "constants.h"
+#include "ascii.c"
+#include "motor.c"
 
 // Constants
 #define LiftMotor motorA
@@ -14,6 +15,7 @@ const float LiftGear = 8/3.0;
 const float MoveGear = 24;
 
 void moveToOrigin();
+void startPrint(int asciiCode);
 
 task listenToBluetooth(){
 	int receiver, method, payload;
@@ -25,8 +27,10 @@ task listenToBluetooth(){
 		if(receiver != 0 || method	!= 0 || payload != 0){
 			PlaySound(soundBlip);
 			switch(method){
-				//case METHOD:
-				//	break;
+				case PRINTER_PRINT:
+				// print the letter
+				startPrint(payload);
+				break;
 			default:
 				PlaySound(soundException);
 				// method not supported
@@ -37,36 +41,70 @@ task listenToBluetooth(){
 	}
 }
 
+// Check if brick is under sensor
 bool haveBrick(){
-	driveNipple(4.2,30,MoveMotor);
-	bool check = false;
 	if ( SensorValue[colorSensor] == REDCOLOR){
-		check = true;
 		PlaySound(soundBeepBeep);
-		} else {
-		while(true){
-			PlaySound(soundException);
-			wait1Msec(1000);
-		}
+		return true;
+	} else {
+		PlaySound(soundException);
+		return false;
 	}
-	driveNipple(4.2,-30,MoveMotor);
-
-	return check;
 }
 
-//-------------setBrick-------------//
+// Plug the brick to the plate
+void plugInBrick(float down){
+	// loading
+	driveGear(down,15,LiftMotor, LiftGear);
+	wait1Msec(500);
+	driveGear(down,-30,LiftMotor, LiftGear);
+	wait1Msec(500);
+
+	driveNipple(5.2,30,MoveMotor);
+	bool have = haveBrick();
+	driveNipple(5.2,-30,MoveMotor);
+	if(!have){
+		sendMessageWithParm(WEBSERVER, ERR_BRICK_NOT_PLUGGED, 0);
+		// loading
+		driveGear(down,15,LiftMotor, LiftGear);
+		wait1Msec(500);
+		driveGear(down,-30,LiftMotor, LiftGear);
+		wait1Msec(500);
+		driveNipple(5.2,30,MoveMotor);
+		bool have = haveBrick();
+		if(!have){
+			// find another way
+		}
+	  driveNipple(5.2,-30,MoveMotor);
+	}
+
+	// Try few times to make sure it is plugged in firmly
+	//driveGear(down,15,LiftMotor, LiftGear);
+	//float vibr = 1;
+	//int speed = 100;
+	//driveGear(vibr,-speed,LiftMotor, LiftGear);
+	//wait1Msec(50);
+	//driveGear(vibr,speed,LiftMotor, LiftGear);
+	//driveGear(vibr,-speed,LiftMotor, LiftGear);
+	//wait1Msec(50);
+	//driveGear(vibr,speed,LiftMotor, LiftGear);
+}
+
+// Pick a brick from warehouse and plug it in
 void setBrick(int i, int j)
 {
 	// how deep should it go
-	const float down = 3.3;
+	const float down = 3;
 
-	// Check ERROR1, if no brick wait 2,5 sec and check again
-	bool error1 = haveBrick();
-	while (error == false ){
-		// send to server error1 message
+	driveNipple(5.2,30,MoveMotor);
+	// If no brick wait 2,5 sec and check again
+	while (!haveBrick()){
+		// send to server error message
+	 	sendMessageWithParm(WEBSERVER, ERR_NO_BRICKS, 0);
 		wait1Msec(2500);
-		error1 = haveBrick();
 	}
+	driveNipple(5.2,-30,MoveMotor);
+
 	// loading
 	driveGear(down,15,LiftMotor, LiftGear);
 	wait1Msec(500);
@@ -81,28 +119,18 @@ void setBrick(int i, int j)
 	wait1Msec(500);
 
 	// printing
-	driveGear(down,15,LiftMotor, LiftGear);
+	//driveGear(down,15,LiftMotor, LiftGear);
 	//wait1Msec(10);
-
-	// Try few times to make sure it is plugged in firmly
-	float vibr = 1;
-	int speed = 100;
-	driveGear(vibr,-speed,LiftMotor, LiftGear);
-	wait1Msec(50);
-	driveGear(vibr,speed,LiftMotor, LiftGear);
-	driveGear(vibr,-speed,LiftMotor, LiftGear);
-	wait1Msec(50);
-	driveGear(vibr,speed,LiftMotor, LiftGear);
+	plugInBrick(down);
 
 	wait1Msec(500);
 	driveGear(down,-30,LiftMotor, LiftGear);
 	wait1Msec(500);
-	haveBrick();
+	//haveBrick();
 }
 
-//-------------writeLetter-------------//
-
-void writeLetter(int* letter, int size)
+// Go through the vector, set bricks, and move conveyor after each row
+void writeLetter(char* letter, int size)
 {
 	for(int i=0; i<size; i++)
 	{
@@ -113,24 +141,13 @@ void writeLetter(int* letter, int size)
 			wait1Msec(500);
 		}
 
-		if (letter[i]==1){
+		if (letter[i]=='1'){
+			sendMessageWithParm(WEBSERVER, STT_PRINTING, i);
 			setBrick(i%5,0);
 			// Calibrate after each brick placement
 			moveToOrigin();
 		}
 	}
-
-}
-
-//-------------checkBrick Error 1 & 2-------------//
-
-bool checkBrick()
-{
-	if 	(SensorValue [ colorSensor ] == WHITECOLOR){
-		return true;
-	}
-	else
-		return false;
 
 }
 
@@ -159,18 +176,23 @@ void moveToTop(){
 	while(true)
 	{
 		if(SensorValue[touchTop] == 0)
-			motor[LiftMotor] = -20;
+			motor[LiftMotor] = -10;
 		else
 			break;
 	}
 	motor[LiftMotor] = 0;
 	// To keep the distance(height) at minimum
-	driveGear(2,30,LiftMotor, LiftGear);
+	driveGear(5,30,LiftMotor, LiftGear);
 	PlaySound(soundShortBlip);
 }
 
+void startPrint(int asciiCode){
+	//char* letter = vectorLetter(asciiCode);
+	char* letter = "100001";
+	nxtDisplayTextLine(1,"Printing: %d", asciiCode);
+	writeLetter(letter, sizeof(letter));
+}
 
-//-------------main-------------//
 
 task main()
 {
@@ -179,15 +201,6 @@ task main()
 	moveToTop();
 	moveToOrigin();
 	wait1Msec(500);
-
-
-	int letter[10] =
-	{
-		1,0,0,0,1,
-		1,0,0,0,0
-	};
-
-	writeLetter(letter, sizeof(letter));
 
 	while(true){wait10Msec(100);}
 }

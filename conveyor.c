@@ -3,13 +3,14 @@
 /* DON'T TOUCH THE ABOVE CONFIGURATION */
 
 
-#include "../motor.c"
-#include "../constants.h"
+#include "motor.c"
+#include "constants.h"
 
 #define UnloadMotor motorB
 #define TransportMotor motorC
 
 void conveyor_move(int payload);
+void moteToPrinterAndSendJob(int letter);
 
 task listenToBluetooth(){
 	int receiver, method, payload;
@@ -23,6 +24,7 @@ task listenToBluetooth(){
 			switch(method){
 			case CONVEYOR_JOB_START:
 				nxtDisplayBigTextLine(2,"Job: %d", payload);
+				moteToPrinterAndSendJob(payload);
 				break;
 			case CONVEYOR_MOVE:
 				conveyor_move(payload);
@@ -81,12 +83,19 @@ void conveyor_move(int payload)
 	driveNipple(gearTeeth, speed, TransportMotor);
 }
 
+void moteToPrinterAndSendJob(int letter){
+		// move to printer
+		driveNipple(27.3, -20, TransportMotor);
+		// tell printer what should be done
+		sendMessageWithParm(PRINTER, PRINTER_PRINT, letter);
+}
+
 
 task main()
 {
 	StartTask(listenToBluetooth);
 
-	//moveToStock();
+	moveToStock();
 
 	const float Origin2Printer = 26;
 

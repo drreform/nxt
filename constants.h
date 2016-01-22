@@ -10,6 +10,7 @@
 #define STT_JOB_SUBMITTED 801
 #define STT_JOB_STARTED 802
 #define STT_JOB_DONE 803
+#define STT_PRINTING 810
 
 // Error Codes
 #define ERR_METHOD  900
