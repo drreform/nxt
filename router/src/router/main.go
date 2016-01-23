@@ -9,7 +9,7 @@ import (
 	"os/signal"
 	"time"
 
-	nxt "github.com/tonyheupel/go-nxt"
+	nxt "github.com/farshidtz/go-nxt"
 )
 
 // Bluetooth message format
@@ -59,6 +59,8 @@ func sendPrintingJob(job JobRequest) error {
 
 	i := int([]byte(job.Letter)[0])
 	log.Println("Sending job:", i)
+
+	// TODO Only accept range 48-57 65-90 for number and letters
 
 	err := sendMessageWithParms(CONVEYOR, JOB_START, i, Devices[NXT_CONVEYOR].n)
 	if err != nil {

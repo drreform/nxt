@@ -23,7 +23,7 @@ import (
 	"fmt"
 	"log"
 
-	nxt "github.com/tonyheupel/go-nxt"
+	nxt "github.com/farshidtz/go-nxt"
 )
 
 func calculateLSB(number int) byte {
