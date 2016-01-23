@@ -7,8 +7,7 @@ router.exe -nxt1 COM_PORT -nxt2 COM_PORT inxt3 COM_PORT
 ```
 
 ### Compile
-You must have [Go](https://golang.org/) 1.5 or above to compile the code:  
-*Go 1.5*
+You must have [Go](https://golang.org/) 1.5 or above to compile the code. For Go 1.6 and above, setting [GO15VENDOREXPERIMENT](https://docs.google.com/document/d/1Bz5-UB7g2uPBdOx-rw5t9MxJwkfpx90cqG9AFL0JAYo) variable might no be necessary.
 ```
 Windows:
 set GO15VENDOREXPERIMENT=1
