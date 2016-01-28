@@ -12,7 +12,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-type JobRequest struct {
+type Request struct {
 	Type   string `json:"type"`
 	Letter string `json:"letter"`
 }
@@ -31,6 +31,7 @@ func setupRouter() *mux.Router {
 	router := mux.NewRouter().StrictSlash(true)
 	router.Path("/").HandlerFunc(homeHandler)
 	router.Methods("POST").Path("/job").HandlerFunc(jobHandler)
+	router.Methods("POST").Path("/command/{command}").HandlerFunc(commandHandler)
 
 	return router
 }
@@ -48,7 +49,7 @@ func jobHandler(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	r.Body.Close()
 
-	var job JobRequest
+	var job Request
 	err = json.Unmarshal(body, &job)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -59,7 +60,26 @@ func jobHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write(b)
 		return
 	}
-	err = processJob(job)
+	err = processHttpRequest(job)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+
+		Error := ErrorReply{err.Error()}
+		b, _ := json.Marshal(&Error)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(b)
+		return
+	}
+
+	w.WriteHeader(http.StatusAccepted)
+}
+
+func commandHandler(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	command := params["command"]
+	log.Printf("Received command %v", command)
+
+	err := processHttpRequest(Request{Type: command})
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 
@@ -84,7 +104,7 @@ func postStatus(t time.Time, method, payload int) error {
 		return err
 	}
 
-	res, err := http.Post(WEBSERVER_URL, "application/json", bytes.NewReader(body))
+	res, err := http.Post(c.WebServer.StatusEndpoint, "application/json", bytes.NewReader(body))
 	if err != nil {
 		return err
 	}

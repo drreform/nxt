@@ -1,0 +1,24 @@
+{
+	"webserver": {
+		"device_id": 9,
+		"status_endpoint": "http://localhost:8080/status"
+	},
+	"nxts": {
+		"printer" : {
+			"device_id": 1,
+			"bluetooth_name": "NXT_1",
+			"bluetooth_port": "COM13",
+			"program_name": "printer.rxe"
+		},
+		"conveyor" : {
+			"device_id": 2,
+			"bluetooth_name": "NXT_2",
+			"bluetooth_port": "COM8",
+			"program_name": "conveyor.rxe"
+		}
+	},
+	"job_handling": {
+		"nxt_device_id": 2,
+		"job_code": 201
+	}
+}

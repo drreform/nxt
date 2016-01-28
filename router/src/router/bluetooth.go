@@ -3,7 +3,7 @@
 	http://help.robotc.net/WebHelpArduino/index.htm#page=NXT_Functions_New/NXT_Bluetooth_Overview.htm
 
 	NXT's Bluetooth Protocol:
-	https://github.com/CSCWLab2015/nxt/blob/master/router/Appendix_2-LEGO_MINDSTORMS_NXT_Direct_commands.pdf
+	https://github.com/CSCWLab2015/nxt/blob/master/wiki/Appendix_2-LEGO_MINDSTORMS_NXT_Direct_commands.pdf
 
 	Go driver used for NXT direct commands:
 	https://github.com/heupel/go-nxt
@@ -83,6 +83,7 @@ const (
 	MessageRequiresResponse      = 0x00
 	Reply                        = 0x02
 	MessageNoResponse            = 0x80
+	StopProgramReply             = 0x01
 )
 
 // Send raw message
@@ -157,7 +158,10 @@ func readMessageWithParms(n *nxt.NXT) (int, int, int, error) {
 	}
 
 	//log.Println("raw:", raw)
-	if size == 3 && raw[0] == Reply && raw[1] == TextMessage {
+	if size == 3 &&
+		raw[0] == Reply &&
+		raw[1] == TextMessage || raw[1] == StopProgramReply {
+		log.Println("Reply:", raw[:3])
 		status := raw[2]
 		AckChannel <- status
 		return 0, 0, 0, NotAMessage
