@@ -24,6 +24,7 @@ task listenToBluetooth(){
 		receiver = messageParm[0];
 		method = messageParm[1];
 		payload = messageParm[2];
+		ClearMessage();
 		if(receiver != 0 || method	!= 0 || payload != 0){
 			PlaySound(soundBlip);
 			switch(method){
@@ -35,7 +36,7 @@ task listenToBluetooth(){
 				PlaySound(soundException);
 				// method not supported
 			}
-			ClearMessage();
+			//ClearMessage();
 		}
 		wait1Msec(500);
 	}
@@ -94,7 +95,7 @@ void plugInBrick(float down){
 void setBrick(int i, int j)
 {
 	// how deep should it go
-	const float down = 3;
+	const float down = 3.2;
 
 	driveNipple(5.2,30,MoveMotor);
 	// If no brick wait 2,5 sec and check again
@@ -103,7 +104,8 @@ void setBrick(int i, int j)
 	 	sendMessageWithParm(WEBSERVER, ERR_NO_BRICKS, 0);
 		wait1Msec(2500);
 	}
-	driveNipple(5.2,-30,MoveMotor);
+	//driveNipple(5.2,-30,MoveMotor);
+	moveToOrigin(); // calibrate
 
 	// loading
 	driveGear(down,15,LiftMotor, LiftGear);
@@ -156,7 +158,7 @@ void writeLetter(char* letter, int size)
 // Move printer head to origin
 void moveToOrigin(){
 	// make sure touch sensor is untriggered
-	driveGear(5,30,MoveMotor, MoveGear);
+	//driveGear(5,30,MoveMotor, MoveGear);
 	while(true)
 	{
 		if(SensorValue[touchOrigin] == 0)
@@ -167,7 +169,7 @@ void moveToOrigin(){
 	motor[MoveMotor] = 0;
 
 	// Shift head to bricks inventory
-	driveGear(0.5,10,MoveMotor, MoveGear);
+	//driveGear(6,10,MoveMotor, MoveGear);
 	PlaySound(soundShortBlip);
 }
 
@@ -176,18 +178,20 @@ void moveToTop(){
 	while(true)
 	{
 		if(SensorValue[touchTop] == 0)
-			motor[LiftMotor] = -10;
+			motor[LiftMotor] = -20;
 		else
 			break;
 	}
 	motor[LiftMotor] = 0;
 	// To keep the distance(height) at minimum
-	driveGear(5,30,LiftMotor, LiftGear);
+	//driveGear(5,30,LiftMotor, LiftGear);
 	PlaySound(soundShortBlip);
 }
 
 void startPrint(int asciiCode){
 	//char* letter = vectorLetter(asciiCode);
+	// TODO Only accept range 48-57 65-90 for number and letters
+
 	char* letter = "100001";
 	nxtDisplayTextLine(1,"Printing: %d", asciiCode);
 	writeLetter(letter, sizeof(letter));
@@ -201,6 +205,8 @@ task main()
 	moveToTop();
 	moveToOrigin();
 	wait1Msec(500);
+
+	startPrint(0);
 
 	while(true){wait10Msec(100);}
 }

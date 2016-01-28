@@ -24,7 +24,7 @@ task listenToBluetooth(){
 			switch(method){
 			case CONVEYOR_JOB_START:
 				nxtDisplayBigTextLine(2,"Job: %d", payload);
-				moteToPrinterAndSendJob(payload);
+				moveToPrinterAndSendJob(payload);
 				break;
 			case CONVEYOR_MOVE:
 				conveyor_move(payload);
@@ -83,7 +83,7 @@ void conveyor_move(int payload)
 	driveNipple(gearTeeth, speed, TransportMotor);
 }
 
-void moteToPrinterAndSendJob(int letter){
+void moveToPrinterAndSendJob(int letter){
 		// move to printer
 		driveNipple(27.3, -20, TransportMotor);
 		// tell printer what should be done
