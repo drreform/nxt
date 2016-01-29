@@ -108,7 +108,7 @@ func postStatus(t time.Time, method, payload int) error {
 	if err != nil {
 		return err
 	}
-	if res.StatusCode != http.StatusOK {
+	if res.StatusCode != http.StatusOK && res.StatusCode != http.StatusAccepted {
 		return fmt.Errorf("Status is %v:%v", res.Status, res.StatusCode)
 	}
 	return nil
