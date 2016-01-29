@@ -1,4 +1,5 @@
-#pragma config(Sensor, S2, colorSensor, sensorCOLORFULL)
+#pragma config(Sensor, S2, colorSensorDown, sensorCOLORFULL)
+#pragma config(Sensor, S3, colorSensorUp, sensorCOLORFULL)
 #pragma config(Sensor, S4, touchTop, sensorTouch)
 #pragma config(Sensor, S1, touchOrigin, sensorTouch)
 //#pragma platform(NXT)
@@ -15,6 +16,7 @@ const float LiftGear = 8/3.0;
 const float MoveGear = 24;
 
 void moveToOrigin();
+void moveToTop();
 void startPrint(int asciiCode);
 
 task listenToBluetooth(){
@@ -28,7 +30,7 @@ task listenToBluetooth(){
 		if(receiver != 0 || method	!= 0 || payload != 0){
 			PlaySound(soundBlip);
 			switch(method){
-				case PRINTER_PRINT:
+			case PRINTER_PRINT:
 				// print the letter
 				startPrint(payload);
 				break;
@@ -44,10 +46,20 @@ task listenToBluetooth(){
 
 // Check if brick is under sensor
 bool haveBrick(){
-	if ( SensorValue[colorSensor] == REDCOLOR){
+	if ( SensorValue[colorSensorDown] == REDCOLOR){
 		PlaySound(soundBeepBeep);
 		return true;
-	} else {
+		} else {
+		PlaySound(soundException);
+		return false;
+	}
+}
+
+bool brickInHead(){
+	if ( SensorValue[colorSensorUp] == REDCOLOR){
+		PlaySound(soundBeepBeep);
+		return true;
+		} else {
 		PlaySound(soundException);
 		return false;
 	}
@@ -76,7 +88,7 @@ void plugInBrick(float down){
 		if(!have){
 			// find another way
 		}
-	  driveNipple(5.2,-30,MoveMotor);
+		driveNipple(5.2,-30,MoveMotor);
 	}
 
 	// Try few times to make sure it is plugged in firmly
@@ -91,44 +103,89 @@ void plugInBrick(float down){
 	//driveGear(vibr,speed,LiftMotor, LiftGear);
 }
 
+void waitBeforeContinue(){
+	PlaySound(soundException);
+	PlaySound(soundException);
+	while(SensorValue[touchOrigin] == 0)
+	{
+		wait1Msec(10);
+	}
+	PlaySound(soundBeepBeep);
+	wait1Msec(500);
+}
+
 // Pick a brick from warehouse and plug it in
 void setBrick(int i, int j)
 {
 	// how deep should it go
-	const float down = 3.2;
+	const float down = 4;
 
 	driveNipple(5.2,30,MoveMotor);
-	// If no brick wait 2,5 sec and check again
+
+	short brickNotAvailable = 0;
+	// If no brick wait and check again
 	while (!haveBrick()){
-		// send to server error message
-	 	sendMessageWithParm(WEBSERVER, ERR_NO_BRICKS, 0);
-		wait1Msec(2500);
+		brickNotAvailable++;
+		if(brickNotAvailable>=3){
+			sendMessageWithParm(WEBSERVER, ERR_NO_BRICKS, 0);
+			waitBeforeContinue();
+			brickNotAvailable = 0;
+			continue;
+		}
+		wait1Msec(5000);
 	}
-	//driveNipple(5.2,-30,MoveMotor);
+
+	// Loading
+	short tryToLoad = 0;
+LOADBRICK:
 	moveToOrigin(); // calibrate
 
-	// loading
 	driveGear(down,15,LiftMotor, LiftGear);
 	wait1Msec(500);
-	driveGear(down,-30,LiftMotor, LiftGear);
+	moveToTop(); // calibrate
 	wait1Msec(500);
 	moveToOrigin(); // calibrate
 
+	// check if brick is in head
+	driveNipple(3.5 ,20,MoveMotor);
+	if(!brickInHead()){
+		tryToLoad++;
+		if(tryToLoad >= 3){
+			sendMessageWithParm(WEBSERVER, ERR_BRICK_NOT_PICKED, 0);
+			waitBeforeContinue();
+			tryToLoad = 0;
+		}
+		goto LOADBRICK;
+	}
+
+	///////////////////////////////////////////
 	// move to plate
-	driveNipple(i+5 ,20,MoveMotor);
-	driveGear(0.8,10,MoveMotor, MoveGear);
+	driveNipple(i+4.5 ,20,MoveMotor);
+	driveGear(1.2,10,MoveMotor, MoveGear);
 	//driveGear(1,-20,MoveMotor, MoveGear);
 	wait1Msec(500);
 
 	// printing
-	//driveGear(down,15,LiftMotor, LiftGear);
-	//wait1Msec(10);
-	plugInBrick(down);
+	short tryToPlug = 0;
+PRINT:
+	driveGear(down,15,LiftMotor, LiftGear);
+	wait1Msec(500);
+	moveToTop(); // calibrate
+	wait1Msec(500);
 
-	wait1Msec(500);
-	driveGear(down,-30,LiftMotor, LiftGear);
-	wait1Msec(500);
-	//haveBrick();
+	const float sensorToHead = 5.2;
+	driveNipple(sensorToHead,30,MoveMotor);
+	if(!haveBrick()){
+		tryToPlug++;
+		if (tryToPlug>=3){
+			sendMessageWithParm(WEBSERVER, ERR_BRICK_NOT_PLUGGED, 0);
+			waitBeforeContinue();
+			tryToPlug = 0;
+		}
+		driveNipple(sensorToHead,-30,MoveMotor);
+		goto PRINT;
+	}
+
 }
 
 // Go through the vector, set bricks, and move conveyor after each row
@@ -136,6 +193,7 @@ void writeLetter(char* letter, int size)
 {
 	for(int i=0; i<size; i++)
 	{
+		nxtDisplayTextLine(2,"Index: %d", i);
 		// move the conveyor
 		if (i!=0 && i%5==0){
 			sendMessageWithParm(CONVEYOR, CONVEYOR_MOVE, 1);
@@ -145,7 +203,7 @@ void writeLetter(char* letter, int size)
 
 		if (letter[i]=='1'){
 			sendMessageWithParm(WEBSERVER, STT_PRINTING, i);
-			setBrick(i%5,0);
+			setBrick(4-i%5,0);
 			// Calibrate after each brick placement
 			moveToOrigin();
 		}
@@ -178,7 +236,7 @@ void moveToTop(){
 	while(true)
 	{
 		if(SensorValue[touchTop] == 0)
-			motor[LiftMotor] = -20;
+			motor[LiftMotor] = -100;
 		else
 			break;
 	}
@@ -188,13 +246,23 @@ void moveToTop(){
 	PlaySound(soundShortBlip);
 }
 
+//string x[25];
+//void showLetterMatrix(string letter){
+//	x = letter;
+//	for(int i=0; i<25; i+=5){
+//			nxtDisplayTextLine(i/5+2,"%s%s%s%s%s", x[i], x[i+1], x[i+2], x[i+3], x[i+4]);
+//	}
+//	return;
+//}
+
 void startPrint(int asciiCode){
-	//char* letter = vectorLetter(asciiCode);
+	const char* letter = vectorLetter(asciiCode);
 	// TODO Only accept range 48-57 65-90 for number and letters
 
-	char* letter = "100001";
+	//char* letter = "1000010101";
 	nxtDisplayTextLine(1,"Printing: %d", asciiCode);
-	writeLetter(letter, sizeof(letter));
+	//showLetterMatrix(letter);
+	//writeLetter(letter, 25);
 }
 
 
@@ -206,7 +274,7 @@ task main()
 	moveToOrigin();
 	wait1Msec(500);
 
-	startPrint(0);
+	//startPrint(65);
 
 	while(true){wait10Msec(100);}
 }

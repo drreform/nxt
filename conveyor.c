@@ -10,7 +10,7 @@
 #define TransportMotor motorC
 
 void conveyor_move(int payload);
-void moteToPrinterAndSendJob(int letter);
+void moveToPrinterAndSendJob(int letter);
 
 task listenToBluetooth(){
 	int receiver, method, payload;
@@ -83,9 +83,10 @@ void conveyor_move(int payload)
 	driveNipple(gearTeeth, speed, TransportMotor);
 }
 
+const float Origin2Printer = 26.1;
 void moveToPrinterAndSendJob(int letter){
 		// move to printer
-		driveNipple(27.3, -20, TransportMotor);
+		driveNipple(Origin2Printer, -20, TransportMotor);
 		// tell printer what should be done
 		sendMessageWithParm(PRINTER, PRINTER_PRINT, letter);
 }
@@ -97,7 +98,7 @@ task main()
 
 	moveToStock();
 
-	const float Origin2Printer = 26;
+
 
 	//driveNipple(Origin2Printer ,-20,TransportMotor);
 
