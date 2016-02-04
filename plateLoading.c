@@ -46,24 +46,25 @@ void moveLiftToOrigin(){
 
 
 void moveToPushPlate(){
-	driveGear(44,20,PushMotor, PushGear);
+	driveGear(36,20,PushMotor, PushGear);
+	driveGear(7,5,PushMotor, PushGear);
 
 }
 
 void loadPlate(){
-	driveGear(25,20,LiftMotor,LiftGear)	;
- 	driveGear(23,20,LiftMotor,LiftGear)	;
- 	//driveGear(60,100,LiftMotor,LiftGear)	;
+	driveGear(15,20,LiftMotor,LiftGear)	;
+	driveGear(18,10,LiftMotor,LiftGear)	;
 
- 	//repeat punching the plate
- 	int i = 0;
- 	while(i<5){
- 	driveGear(10,-40,LiftMotor,LiftGear)	;
- 	driveGear(13,40,LiftMotor,LiftGear)	;
- 	i++;
-			}
-	driveGear(5,-30,LiftMotor,LiftGear)	;
- 	}
+	//repeat punching the plate
+	int i = 0;
+	while(i<4)
+	{
+		driveGear(3,-40,LiftMotor,LiftGear)	;
+		driveGear(4.5,10,LiftMotor,LiftGear)	;
+		wait1Msec(500);
+		i++;
+	}
+}
 
 
 
@@ -71,15 +72,15 @@ void loadPlate(){
 task main()
 {
 
-//push a plate to the car
-//driveGear(5,30,PushMotor, PushGear);
-//moveToOrigin();
-//moveToPushPlate();
-//moveToOrigin();
+	//push a plate to the car
+	driveGear(2,30,PushMotor, PushGear);
+	moveToOrigin();
+	moveLiftToOrigin();
+	moveToPushPlate();
+	moveToOrigin();
 
-//load the plate on conveyor
-moveLiftToOrigin();
-loadPlate();
-moveLiftToOrigin();
+	//load the plate on conveyor
+	loadPlate();
+	moveLiftToOrigin();
 
 }
